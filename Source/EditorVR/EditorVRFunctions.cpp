@@ -4,9 +4,8 @@
 
 #include "EditorVRFunctions.h"
 
-// Función de serialización para todo el nivel del Editor de Niveles.
-// Guarda en un archivo binario los objetos editables creados con el Editor de Niveles, además de la ubicación 
-// del personaje en la escena.
+// Función de serialización para un nivel del Editor de Niveles. Guarda en un archivo binario los objetos
+// editables creados con el Editor de Niveles, además de la ubicación del personaje en la escena.
 bool UEditorVRFunctions::SerializeLevel(UObject* WorldContextObject, FString FileName)
 {
 	std::ofstream File(*FileName, std::ios::out | std::ios::binary);
@@ -50,37 +49,38 @@ bool UEditorVRFunctions::SerializeLevel(UObject* WorldContextObject, FString Fil
 }
 
 // Función de serialización para un objeto editable.
-void UEditorVRFunctions::SerializeEditableObject(std::ofstream& File, AActor* EditableObject)
+void UEditorVRFunctions::SerializeEditableObject(std::ofstream &File, AActor* EditableObject)
 {
 	//Escribir el nombre de la clase
-	FString ClassNameString = EditableObject->GetClass()->GetPathName();
-	const char* ClassNameConstChar = TCHAR_TO_ANSI(*ClassNameString);
-	UE_LOG(LogTemp, Log, TEXT("- Nombre: %s"), *ClassNameString);
-	File.write(ClassNameConstChar, sizeof(char) * (strlen(ClassNameConstChar) + 1));
+	FString ClassNameString = EditableObject->GetClass()->GetName();
+	const char* ClassNameChar = TCHAR_TO_ANSI(*ClassNameString);
+	int ClassNameFullLength = strlen(ClassNameChar) + 1;
+	UE_LOG(LogTemp, Log, TEXT("- Nombre: %s (full length: %d)"), *ClassNameString, ClassNameFullLength);
+	File.write(reinterpret_cast<const char*>(&ClassNameFullLength), sizeof(ClassNameFullLength));
+	File.write(ClassNameChar, sizeof(char) * ClassNameFullLength);
 
 	//Escribir la posición del objeto
-	FVector vector = EditableObject->GetActorLocation();
-	UE_LOG(LogTemp, Log, TEXT("- Posicion: %.2f %.2f %.2f"), vector.X, vector.Y, vector.Z);
-	File.write(reinterpret_cast<const char*>(&vector.X), sizeof(vector.X));
-	File.write(reinterpret_cast<const char*>(&vector.Y), sizeof(vector.Y));
-	File.write(reinterpret_cast<const char*>(&vector.Z), sizeof(vector.Z));
+	FVector Location = EditableObject->GetActorLocation();
+	UE_LOG(LogTemp, Log, TEXT("- Posicion: %.2f %.2f %.2f"), Location.X, Location.Y, Location.Z);
+	File.write(reinterpret_cast<const char*>(&Location.X), sizeof(Location.X));
+	File.write(reinterpret_cast<const char*>(&Location.Y), sizeof(Location.Y));
+	File.write(reinterpret_cast<const char*>(&Location.Z), sizeof(Location.Z));
 
 	//Escribir la rotación del objeto
-	FRotator rotator = EditableObject->GetActorRotation();
-	UE_LOG(LogTemp, Log, TEXT("- Rotacion: %.2f %.2f %.2f"), rotator.Pitch, rotator.Roll, rotator.Yaw);
-	File.write(reinterpret_cast<const char*>(&rotator.Pitch), sizeof(rotator.Pitch));
-	File.write(reinterpret_cast<const char*>(&rotator.Roll), sizeof(rotator.Roll));
-	File.write(reinterpret_cast<const char*>(&rotator.Yaw), sizeof(rotator.Yaw));
+	FRotator Rotation = EditableObject->GetActorRotation();
+	UE_LOG(LogTemp, Log, TEXT("- Rotacion: %.2f %.2f %.2f"), Rotation.Pitch, Rotation.Roll, Rotation.Yaw);
+	File.write(reinterpret_cast<const char*>(&Rotation.Pitch), sizeof(Rotation.Pitch));
+	File.write(reinterpret_cast<const char*>(&Rotation.Roll), sizeof(Rotation.Roll));
+	File.write(reinterpret_cast<const char*>(&Rotation.Yaw), sizeof(Rotation.Yaw));
 
 	//Escribir la escala del objeto
-	FVector scale = EditableObject->GetActorScale();
-	UE_LOG(LogTemp, Log, TEXT("- Escala: %.2f %.2f %.2f"), scale.X, scale.Y, scale.Z)
-	File.write(reinterpret_cast<const char*>(&scale.X), sizeof(scale.X));
+	FVector Scale = EditableObject->GetActorScale();
+	UE_LOG(LogTemp, Log, TEXT("- Escala: %.2f %.2f %.2f"), Scale.X, Scale.Y, Scale.Z)
+	File.write(reinterpret_cast<const char*>(&Scale.X), sizeof(Scale.X));
 }
 
-// Función de deserialización.
-// Toma un archivo binario y lo lee para ubicar los objetos editables creados con anterioridad, además de ubicar
-// al personaje en la escena.
+// Función de deserialización para un nivel del Editor de Niveles. Toma un archivo binario y lo lee para
+// ubicar los objetos editables creados con anterioridad, además de ubicar al personaje en la escena.
 bool UEditorVRFunctions::DeserializeLevel(UObject* WorldContextObject, FString FileName)
 {
 	std::ifstream File(*FileName, std::ios::in | std::ios::binary);
@@ -101,22 +101,23 @@ un archivo generado por este editor.", "Error");
 	}
 
 	//Abrir el nivel de edición
-	UGameplayStatics::OpenLevel(WorldContextObject, FName("EditLevel"));
+	UGameplayStatics::OpenLevel(WorldContextObject, FName(TEXT("EditLevel")));
 
 	//Leer la posición del personaje
-	float PlayerX, PlayerY, PlayerZ;
-	File.read(reinterpret_cast<char*>(&PlayerX), sizeof(PlayerX));
-	File.read(reinterpret_cast<char*>(&PlayerY), sizeof(PlayerY));
-	File.read(reinterpret_cast<char*>(&PlayerZ), sizeof(PlayerZ));
-	UE_LOG(LogTemp, Log, TEXT("Vector personaje: %.2f %.2f %.2f"), PlayerX, PlayerY, PlayerZ);
+	FVector PlayerStart(0);
+	File.read(reinterpret_cast<char*>(&PlayerStart.X), sizeof(PlayerStart.X));
+	File.read(reinterpret_cast<char*>(&PlayerStart.Y), sizeof(PlayerStart.Y));
+	File.read(reinterpret_cast<char*>(&PlayerStart.Z), sizeof(PlayerStart.Z));
+	UE_LOG(LogTemp, Log, TEXT("Personaje: %.2f %.2f %.2f"), PlayerStart.X, PlayerStart.Y, PlayerStart.Z);
 
-	//Leer la cantidad de objetos editables a colocar
+	//Colocar los objetos editables
 	int EditableObjectCount;
 	File.read(reinterpret_cast<char*>(&EditableObjectCount), sizeof(EditableObjectCount));
 	UE_LOG(LogTemp, Log, TEXT("# objetos: %d"), EditableObjectCount);
 
 	for (int i = 0; i < EditableObjectCount; i++) {
 		UE_LOG(LogTemp, Log, TEXT("Objeto #%d:"), EditableObjectCount);
+		DeserializeEditableObject(WorldContextObject, File);
 	}
 
 	//Cerrar el archivo
@@ -125,6 +126,80 @@ un archivo generado por este editor.", "Error");
 	return true;
 }
 
+// Función de deserialización para un objeto editable.
+AActor* UEditorVRFunctions::DeserializeEditableObject(UObject* WorldContextObject, std::ifstream &File)
+{
+	//Leer el nombre de la clase
+	int ClassNameFullLength = 0;
+	File.read(reinterpret_cast<char*>(&ClassNameFullLength), sizeof(ClassNameFullLength));
+	char* ClassNameString = new char[ClassNameFullLength];
+	File.read(ClassNameString, sizeof(char) * ClassNameFullLength);
+	UE_LOG(LogTemp, Log, TEXT("- Clase: %s (longitud: %d)"), ANSI_TO_TCHAR(ClassNameString), ClassNameFullLength);
+	const char* ClassPathName = GetClassPathName(ClassNameString);
+	delete[] ClassNameString; //MUY IMPORTANTE SI NO QUEREMOS SATURAR LA MEMORIA
+	UE_LOG(LogTemp, Log, TEXT("- ClassPath: %s"), ANSI_TO_TCHAR(ClassPathName));
+
+	//Leer la posición del objeto
+	FVector Location(0);
+	File.read(reinterpret_cast<char*>(&Location.X), sizeof(Location.X));
+	File.read(reinterpret_cast<char*>(&Location.Y), sizeof(Location.Y));
+	File.read(reinterpret_cast<char*>(&Location.Z), sizeof(Location.Z));
+	UE_LOG(LogTemp, Log, TEXT("- Posicion: %.2f %.2f %.2f"), Location.X, Location.Y, Location.Z);
+
+	//Leer la rotación del objeto
+	FRotator Rotation(0);
+	File.read(reinterpret_cast<char*>(&Rotation.Pitch), sizeof(Rotation.Pitch));
+	File.read(reinterpret_cast<char*>(&Rotation.Roll), sizeof(Rotation.Roll));
+	File.read(reinterpret_cast<char*>(&Rotation.Yaw), sizeof(Rotation.Yaw));
+	UE_LOG(LogTemp, Log, TEXT("- Rotacion: %.2f %.2f %.2f"), Rotation.Pitch, Rotation.Roll, Rotation.Yaw);
+
+	//Leer la escala del objeto
+	float Scale = 0;
+	File.read(reinterpret_cast<char*>(&Scale), sizeof(Scale));
+	UE_LOG(LogTemp, Log, TEXT("- Escala: %.2f"), Scale);
+
+	//Obtener las referencias necesarias para poder crear el objeto editable
+	UClass* EditableObjectClass = StaticLoadClass(AActor::StaticClass(), NULL, ANSI_TO_TCHAR(ClassPathName),
+		NULL, LOAD_None, NULL);
+	if (!EditableObjectClass) {
+		UE_LOG(LogTemp, Warning, TEXT("No se pudo obtener la referencia a EditableObjectClass."));
+		return;
+	}
+	UWorld* CurrentWorld = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull);
+	if (!CurrentWorld) {
+		UE_LOG(LogTemp, Warning, TEXT("No se pudo obtener la referencia a CurrentWorld."));
+		return;
+	}
+
+	//Crear el objeto editable
+	AActor* EditableObject = CurrentWorld->SpawnActor(EditableObjectClass);
+	if (!EditableObject) {
+		UE_LOG(LogTemp, Warning, TEXT("No se pudo crear el objeto editable %s."), ClassPathName);
+		return;
+	}
+	UE_LOG(LogTemp, Log, TEXT("Objeto editable creado!"));
+	EditableObject->SetActorLocation(Location);
+	EditableObject->SetActorRotation(Rotation);
+	EditableObject->SetActorScale3D(FVector(Scale));
+	UE_LOG(LogTemp, Log, TEXT("Objeto editable seteado!"));
+
+	return EditableObject;
+}
+
+// Función auxiliar que mapea la dirección completa de la clase guardada en el archivo serializable, de
+// manera que se pueda usar en el SpawnActor(). Esta parte del código va a variar entre el editor y el
+// juego, ya que depende de las ubicaciones de las clases dentro del proyecto fuente. (Content/)
+const char* UEditorVRFunctions::GetClassPathName(char* ClassNameString)
+{
+	if (strcmp(ClassNameString, "EditableCube_C") == 0)
+		return "Blueprint'/Game/Classes/EditableCube.EditableCube_C'";
+	if (strcmp(ClassNameString, "EditableSphere_C") == 0)
+		return "Blueprint'/Game/Classes/EditableSphere.EditableSphere_C'";
+	//Si por casualidad no se encuentra la clase exacta, retornar EditableObject por defecto.
+	return "Blueprint'/Game/Classes/EditableObject.EditableObject_C'";
+}
+
+// Muestra mensajes en las funciones especiales del Editor de Niveles.
 void UEditorVRFunctions::DisplayMessage(const char* Message, const char* Title)
 {
 	FString TitleString(UTF8_TO_TCHAR(Title)), MessageString(UTF8_TO_TCHAR(Message));

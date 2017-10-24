@@ -9,6 +9,7 @@
 #include <cstring>
 #include "CoreMinimal.h"
 #include "CoreUObject.h" //Para la función "StaticLoadClass"
+#include "Engine.h" //Para la función "GetWorldFromContextObject"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Kismet/GameplayStatics.h" //Para la función "GetAllActorsofClass"
 #include "Misc/MessageDialog.h" //Para la función "DisplayMessage"
@@ -28,6 +29,7 @@ public:
 
 private:
 	static void SerializeEditableObject(std::ofstream& File, AActor* EditableObject);
-	//static AActor* DeserializeEditableObject(std::ifstream& File);
+	static AActor* DeserializeEditableObject(UObject* WorldContextObject, std::ifstream& File);
+	static const char* GetClassPathName(char* ClassNameString);
 	static void DisplayMessage(const char* Message, const char* Title);
 };
