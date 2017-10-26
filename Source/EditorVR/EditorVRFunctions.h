@@ -1,6 +1,5 @@
 // Hecho por el grupo de Desarrollo de Programas 2 "VR Moche".
-// Copyright (C) 2017 Pontificia Universidad Católica del Perú.
-// Todos los derechos reservados.
+// Copyright (C) 2017 Pontificia Universidad Católica del Perú. Todos los derechos reservados.
 
 #pragma once
 
@@ -28,8 +27,10 @@ public:
 		static bool DeserializeLevel(UObject* WorldContextObject, FString FileName);
 
 private:
-	static void SerializeEditableObject(std::ofstream& File, AActor* EditableObject);
-	static AActor* DeserializeEditableObject(UObject* WorldContextObject, std::ifstream& File);
+	static void SerializeEditablePlayerStart(std::ofstream &File, UObject* WorldContextObject);
+	static void SerializeEditableObject(std::ofstream &File, AActor* EditableObject);
+	static void DeserializeEditablePlayerStart(std::ifstream &File, UObject* WorldContextObject);
+	static void DeserializeEditableObject(std::ifstream &File, UObject* WorldContextObject);
 	static const char* GetClassPathName(char* ClassNameString);
 	static void DisplayMessage(const char* Message, const char* Title);
 };

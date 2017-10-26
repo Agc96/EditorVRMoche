@@ -1,6 +1,5 @@
 // Hecho por el grupo de Desarrollo de Programas 2 "VR Moche".
-// Copyright (C) 2017 Pontificia Universidad Católica del Perú.
-// Todos los derechos reservados.
+// Copyright (C) 2017 Pontificia Universidad Católica del Perú. Todos los derechos reservados.
 
 #include "EditorVRFunctions.h"
 
@@ -18,11 +17,7 @@ bool UEditorVRFunctions::SerializeLevel(UObject* WorldContextObject, FString Fil
 	File.write("VRMoche", 8 * sizeof(char));
 
 	//Escribir la posición del personaje
-	FVector PlayerStart(0, 0, 120);
-	//ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(WorldContextObject, 0);
-	File.write(reinterpret_cast<const char*>(&PlayerStart.X), sizeof(PlayerStart.X));
-	File.write(reinterpret_cast<const char*>(&PlayerStart.Y), sizeof(PlayerStart.Y));
-	File.write(reinterpret_cast<const char*>(&PlayerStart.Z), sizeof(PlayerStart.Z));
+	SerializeEditablePlayerStart(File, WorldContextObject);
 
 	//Obtener los objetos editables
 	TSubclassOf<AActor> EditableObjectClass = StaticLoadClass(AActor::StaticClass(), NULL,
@@ -46,6 +41,31 @@ bool UEditorVRFunctions::SerializeLevel(UObject* WorldContextObject, FString Fil
 	File.close();
 	DisplayMessage("Se generó el archivo correctamente.", "Editor VR Moche");
 	return true;
+}
+
+// Función de serialización para el objeto indicador de la posición inicial del jugador.
+void UEditorVRFunctions::SerializeEditablePlayerStart(std::ofstream &File, UObject* WorldContextObject)
+{
+	//Obtener la lista de objetoss indicador de la posición inicial
+	TSubclassOf<AActor> EditablePlayerStartClass = StaticLoadClass(AStaticMeshActor::StaticClass(), NULL,
+		TEXT("Blueprint'/Game/Classes/EditablePlayerStart.EditablePlayerStart_C'"), NULL, LOAD_None, NULL);
+	TArray<AActor*> EditablePlayerStartArray;
+	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, EditablePlayerStartClass, EditablePlayerStartArray);
+
+	//Obtener la ubicación del objeto indicador de la posición inicial
+	FVector PlayerStartLocation(0);
+	if (EditablePlayerStartArray.Num() > 0)
+		PlayerStartLocation = EditablePlayerStartArray[0]->GetActorLocation();
+	else
+		UE_LOG(LogTemp, Warning, TEXT("No se pudo encontrar ningún EditablePlayerStart, así que se está colocando\
+ por defecto (0,0,0)."));
+		
+	//Escribir la ubicación en el archivo binario
+	UE_LOG(LogTemp, Log, TEXT("Personaje: %.2f %.2f %.2f"), PlayerStartLocation.X, PlayerStartLocation.Y,
+		PlayerStartLocation.Z);
+	File.write(reinterpret_cast<const char*>(&PlayerStartLocation.X), sizeof(PlayerStartLocation.X));
+	File.write(reinterpret_cast<const char*>(&PlayerStartLocation.Y), sizeof(PlayerStartLocation.Y));
+	File.write(reinterpret_cast<const char*>(&PlayerStartLocation.Z), sizeof(PlayerStartLocation.Z));
 }
 
 // Función de serialización para un objeto editable.
@@ -100,15 +120,8 @@ un archivo generado por este editor.", "Error");
 		return false;
 	}
 
-	//Abrir el nivel de edición
-	UGameplayStatics::OpenLevel(WorldContextObject, FName(TEXT("EditLevel")));
-
 	//Leer la posición del personaje
-	FVector PlayerStart(0);
-	File.read(reinterpret_cast<char*>(&PlayerStart.X), sizeof(PlayerStart.X));
-	File.read(reinterpret_cast<char*>(&PlayerStart.Y), sizeof(PlayerStart.Y));
-	File.read(reinterpret_cast<char*>(&PlayerStart.Z), sizeof(PlayerStart.Z));
-	UE_LOG(LogTemp, Log, TEXT("Personaje: %.2f %.2f %.2f"), PlayerStart.X, PlayerStart.Y, PlayerStart.Z);
+	DeserializeEditablePlayerStart(File, WorldContextObject);
 
 	//Colocar los objetos editables
 	int EditableObjectCount;
@@ -117,7 +130,7 @@ un archivo generado por este editor.", "Error");
 
 	for (int i = 0; i < EditableObjectCount; i++) {
 		UE_LOG(LogTemp, Log, TEXT("Objeto #%d:"), EditableObjectCount);
-		DeserializeEditableObject(WorldContextObject, File);
+		DeserializeEditableObject(File, WorldContextObject);
 	}
 
 	//Cerrar el archivo
@@ -126,8 +139,32 @@ un archivo generado por este editor.", "Error");
 	return true;
 }
 
+// Función de deserialización para el objeto indicador de la posición inicial del jugador.
+void UEditorVRFunctions::DeserializeEditablePlayerStart(std::ifstream &File, UObject* WorldContextObject)
+{
+	//Obtener la lista de objetos indicador de la posición inicial
+	TSubclassOf<AActor> EditablePlayerStartClass = StaticLoadClass(AStaticMeshActor::StaticClass(), NULL,
+		TEXT("Blueprint'/Game/Classes/EditablePlayerStart.EditablePlayerStart_C'"), NULL, LOAD_None, NULL);
+	TArray<AActor*> EditablePlayerStartArray;
+	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, EditablePlayerStartClass, EditablePlayerStartArray);
+
+	//Leer las posiciones del objeto indicador de la posición inicial
+	FVector PlayerStartLocation(0);
+	File.read(reinterpret_cast<char*>(&PlayerStartLocation.X), sizeof(PlayerStartLocation.X));
+	File.read(reinterpret_cast<char*>(&PlayerStartLocation.Y), sizeof(PlayerStartLocation.Y));
+	File.read(reinterpret_cast<char*>(&PlayerStartLocation.Z), sizeof(PlayerStartLocation.Z));
+	UE_LOG(LogTemp, Log, TEXT("Personaje: %.2f %.2f %.2f"), PlayerStartLocation.X, PlayerStartLocation.Y,
+		PlayerStartLocation.Z);
+
+	//Ajustar la ubicación del objeto indicacdor de la posición inicial
+	if (EditablePlayerStartArray.Num() > 0)
+		EditablePlayerStartArray[0]->SetActorLocation(PlayerStartLocation);
+	else
+		UE_LOG(LogTemp, Warning, TEXT("No se encontró ningún EditablePlayerStart, así que se ignora."));
+}
+
 // Función de deserialización para un objeto editable.
-AActor* UEditorVRFunctions::DeserializeEditableObject(UObject* WorldContextObject, std::ifstream &File)
+void UEditorVRFunctions::DeserializeEditableObject(std::ifstream &File, UObject* WorldContextObject)
 {
 	//Leer el nombre de la clase
 	int ClassNameFullLength = 0;
@@ -177,13 +214,10 @@ AActor* UEditorVRFunctions::DeserializeEditableObject(UObject* WorldContextObjec
 		UE_LOG(LogTemp, Warning, TEXT("No se pudo crear el objeto editable %s."), ClassPathName);
 		return;
 	}
-	UE_LOG(LogTemp, Log, TEXT("Objeto editable creado!"));
 	EditableObject->SetActorLocation(Location);
 	EditableObject->SetActorRotation(Rotation);
 	EditableObject->SetActorScale3D(FVector(Scale));
-	UE_LOG(LogTemp, Log, TEXT("Objeto editable seteado!"));
-
-	return EditableObject;
+	UE_LOG(LogTemp, Log, TEXT("Objeto editable creado y posicionado correctamente."));
 }
 
 // Función auxiliar que mapea la dirección completa de la clase guardada en el archivo serializable, de
