@@ -4,6 +4,9 @@
 
 #include "EditorVRSerializer.h"
 
+#define EditablePlayerLocationClassPath "Blueprint'/Game/Classes/EditablePlayerLocation.EditablePlayerLocation_C'"
+#define EditableObjectClassPath "Blueprint'/Game/Classes/EditableObject.EditableObject_C'"
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////  SERIALIZACIÓN  ////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -16,7 +19,7 @@ bool UEditorVRSerializer::SerializeLevel(UObject* WorldContextObject, const FStr
 
 	//Obtener los objetos de ubicación del personaje
 	TSubclassOf<AActor> EditablePlayerLocationClass = StaticLoadClass(AActor::StaticClass(), NULL,
-		TEXT("Blueprint'/Game/Classes/EditablePlayerStart.EditablePlayerStart_C'"), NULL, LOAD_None, NULL);
+		TEXT(EditablePlayerLocationClassPath), NULL, LOAD_None, NULL);
 	TArray<AActor*> EditablePlayerLocationArray;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, EditablePlayerLocationClass, EditablePlayerLocationArray);
 
@@ -32,7 +35,7 @@ bool UEditorVRSerializer::SerializeLevel(UObject* WorldContextObject, const FStr
 
 	//Obtener los objetos editables del mapa
 	TSubclassOf<AActor> EditableObjectClass = StaticLoadClass(AActor::StaticClass(), NULL,
-		TEXT("Blueprint'/Game/Classes/EditableObject.EditableObject_C'"), NULL, LOAD_None, NULL);
+		TEXT(EditableObjectClassPath), NULL, LOAD_None, NULL);
 	TArray<AActor*> EditableObjectArray;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, EditableObjectClass, EditableObjectArray);
 
@@ -120,7 +123,7 @@ bool UEditorVRSerializer::DeserializeLevel(UObject* WorldContextObject, const FS
 
 	//Obtener la lista de objetos de ubicación del personaje
 	TSubclassOf<AActor> EditablePlayerLocationClass = StaticLoadClass(AActor::StaticClass(), NULL,
-		TEXT("Blueprint'/Game/Classes/EditablePlayerStart.EditablePlayerStart_C'"), NULL, LOAD_None, NULL);
+		TEXT(EditablePlayerLocationClassPath), NULL, LOAD_None, NULL);
 	TArray<AActor*> EditablePlayerLocationArray;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, EditablePlayerLocationClass, EditablePlayerLocationArray);
 
@@ -232,6 +235,6 @@ FString UEditorVRSerializer::GetEditableObjectClassPath(const FString& ClassName
 		return FString(TEXT("Blueprint'/Game/Classes/EditableCube.EditableCube_C'"));
 	if (ClassName.Compare(FString(TEXT("EditableSphere_C"))) == 0)
 		return FString(TEXT("Blueprint'/Game/Classes/EditableSphere.EditableSphere_C'"));
-	//Si por casualidad no se encuentra la clase exacta, retornar una cadena vacía.
-	return FString();
+	//Si por casualidad no se encuentra la clase exacta, retornar el path de EditableObject.
+	return FString(TEXT(EditableObjectClassPath));
 }
