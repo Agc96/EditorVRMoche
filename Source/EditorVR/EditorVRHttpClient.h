@@ -20,16 +20,16 @@ class EDITORVR_API UEditorVRHttpClient : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 public:
-    UFUNCTION()
-        static void DescargarArchivo(FString NombreArchivo);
-    UFUNCTION()
-        static void SubirArchivo(FString Path);
+    UFUNCTION(BlueprintCallable, Category = "Editor VR Moche")
+        static bool DescargarArchivo(FString NombreArchivo);
+    UFUNCTION(BlueprintCallable, Category = "Editor VR Moche")
+        static bool SubirArchivo(FString Path);
 
 private:
     static TSharedRef<IHttpRequest> RequestWithRoute(FString Subroute);
     static TSharedRef<IHttpRequest> GetRequest(FString Subroute);
     static TSharedRef<IHttpRequest> PostRequest(FString Subroute, const TArray<uint8>& DatosASubir, FString NombreArchivo);
-    static void Send(TSharedRef<IHttpRequest>& Request);
+    static bool Send(TSharedRef<IHttpRequest>& Request);
     static bool ResponseIsValid(FHttpResponsePtr Response, bool bWasSuccessful);
 
     static void RespuestaDescarga(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);

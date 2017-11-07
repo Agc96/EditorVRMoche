@@ -52,9 +52,9 @@ TSharedRef<IHttpRequest> UEditorVRHttpClient::PostRequest(FString Subroute, cons
     return Request;
 }
 
-void UEditorVRHttpClient::Send(TSharedRef<IHttpRequest>& Request)
+bool UEditorVRHttpClient::Send(TSharedRef<IHttpRequest>& Request)
 {
-    Request->ProcessRequest();
+    return Request->ProcessRequest();
 }
 
 bool UEditorVRHttpClient::ResponseIsValid(FHttpResponsePtr Response, bool bWasSuccessful)
@@ -91,15 +91,15 @@ void UEditorVRHttpClient::RespuestaSubida(FHttpRequestPtr Request, FHttpResponse
     }
 }
 
-void UEditorVRHttpClient::DescargarArchivo(FString NombreArchivo)
+bool UEditorVRHttpClient::DescargarArchivo(FString NombreArchivo)
 {
     TSharedRef<IHttpRequest> Request = GetRequest("download/" + NombreArchivo);
     Request->OnProcessRequestComplete().BindStatic(RespuestaDescarga);
-    Send(Request);
+    return Send(Request);
 }
 
 
-void UEditorVRHttpClient::SubirArchivo(FString Path)
+bool UEditorVRHttpClient::SubirArchivo(FString Path)
 {
     //FString Path = "C:\\Users\\Slsvcn\\Desktop\\mascapo (3).bin";
     TArray<uint8> TheBinaryArray;
@@ -107,5 +107,5 @@ void UEditorVRHttpClient::SubirArchivo(FString Path)
 
     TSharedRef<IHttpRequest> Request = PostRequest("upload", TheBinaryArray, FPaths::GetCleanFilename(Path));
     Request->OnProcessRequestComplete().BindStatic(RespuestaSubida);
-    Send(Request);
+    return Send(Request);
 }
