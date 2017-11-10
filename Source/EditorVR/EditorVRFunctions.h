@@ -25,6 +25,9 @@ public:
 		static bool SerializeLevel(UObject* WorldContextObject, FString FileName);
 	UFUNCTION(BlueprintCallable, Category = "EditorVRMoche", meta = (WorldContext = "WorldContextObject"))
 		static bool DeserializeLevel(UObject* WorldContextObject, FString FileName);
+	UFUNCTION(BlueprintCallable, Category = "EditorVRMoche", meta = (WorldContext = "WorldContextObject"))
+		TArray<FString> GetAllFilesInDirectory(const FString directory, const bool fullPath, const FString onlyFilesStartingWith, const FString onlyFilesWithExtension);
+
 
 private:
 	static void SerializeEditablePlayerStart(std::ofstream &File, UObject* WorldContextObject);
@@ -33,4 +36,5 @@ private:
 	static void DeserializeEditableObject(std::ifstream &File, UObject* WorldContextObject);
 	static const char* GetClassPathName(char* ClassNameString);
 	static void DisplayMessage(const char* Message, const char* Title);
+	
 };
