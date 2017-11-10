@@ -26,7 +26,7 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "EditorVRMoche", meta = (WorldContext = "WorldContextObject"))
 		static bool DeserializeLevel(UObject* WorldContextObject, FString FileName);
 	UFUNCTION(BlueprintCallable, Category = "EditorVRMoche", meta = (WorldContext = "WorldContextObject"))
-		TArray<FString> GetAllFilesInDirectory(const FString directory, const bool fullPath, const FString onlyFilesStartingWith, const FString onlyFilesWithExtension);
+		static TArray<FString> GetAllFilesInDirectory(const FString directory, const bool fullPath, const FString onlyFilesStartingWith, const FString onlyFilesWithExtension);
 
 
 private:

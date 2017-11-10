@@ -42,7 +42,7 @@ bool UEditorVRFunctions::SerializeLevel(UObject* WorldContextObject, FString Fil
 	DisplayMessage("Se generó el archivo correctamente.", "Editor VR Moche");
 	return true;
 }
-
+// la gran mentira
 // Función de serialización para el objeto indicador de la posición inicial del jugador.
 void UEditorVRFunctions::SerializeEditablePlayerStart(std::ofstream &File, UObject* WorldContextObject)
 {
@@ -278,4 +278,6 @@ TArray<FString> UEditorVRFunctions::GetAllFilesInDirectory(const FString directo
 			files.Add(fullPath ? filePath : fileName);
 		}
 	}
+
+	return files;
 }
