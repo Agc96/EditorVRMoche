@@ -73,3 +73,6 @@ Intermediate/*
 
 # Cache files for the editor to use
 DerivedDataCache/*
+
+# Batch para arreglar las redirecciones
+FixRedirectors.bat
