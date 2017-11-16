@@ -16,6 +16,7 @@
 #include "Misc/FileHelper.h" //Para las funciones "SaveArrayToFile" y "LoadFileToArray"
 #include "Misc/MessageDialog.h" //Para la función "DisplayMessage"
 #include "Misc/Paths.h"
+#include "Runtime/Online/HTTP/Public/Http.h"
 #include "Serialization/BufferArchive.h"
 #include "Serialization/MemoryReader.h"
 #include "EditorVRFunctions.generated.h"
@@ -23,6 +24,7 @@
 #define PlayerLocationClassPath TEXT("Blueprint'/Game/Blueprints/PlayerLocation.PlayerLocation_C'")
 #define EditableObjectClassPath TEXT("Blueprint'/Game/Blueprints/EditableObject.EditableObject_C'")
 #define EditorFileExtension FString(TEXT("vrm"))
+#define ApiBaseUrl "http://localhost:8080/api/"
 
 UCLASS()
 class EDITORVR_API UEditorVRFunctions : public UBlueprintFunctionLibrary
@@ -67,4 +69,8 @@ private:
 	static bool VerifyOrCreateDirectory(IPlatformFile& PlatformFile, const FString& Directory);
 	static bool CheckIfCreateOrReplaceFile(const FString& FilePath);
 	//Exportar nivel al servidor Web
+    static TSharedRef<IHttpRequest> PostRequest(FString Subroute, const TArray<uint8>& DatosASubir, FString NombreArchivo);
+    static TSharedRef<IHttpRequest> RequestWithRoute(FString Subroute);
+    static void ResponseMessage(FHttpRequestPtr Request, FHttpResponsePtr Response, bool bWasSuccessful);
+    static bool ResponseIsValid(FHttpResponsePtr Response, bool bWasSuccessful);
 };
