@@ -31,12 +31,28 @@ EAppReturnType::Type UEditorVRFunctions::DisplayMessage(EAppMsgType::Type Type, 
 // juego, ya que depende de las ubicaciones de las clases dentro del proyecto fuente. (Content/)
 FString UEditorVRFunctions::GetEditableObjectClassPath(const FString& ClassName)
 {
+	//Objetos de prueba (básicos)
 	if (ClassName.Equals(FString(TEXT("EditableCube_C")), ESearchCase::IgnoreCase))
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableCube.EditableCube_C'"));
-
 	if (ClassName.Equals(FString(TEXT("EditableSphere_C")), ESearchCase::IgnoreCase))
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSphere.EditableSphere_C'"));
 
-	//Si por casualidad no se encuentra la clase exacta, retornar una cadena vacía.
-	return FString();
+	//Objetos del proyecto VR Moche
+	if (ClassName.Equals(FString(TEXT("EditableAiapaec_C")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Blueprint'/Game/Blueprints/EditableAiapaec.EditableAiapaec_C'"));
+
+	//Objetos de luz
+	if (ClassName.Equals(FString(TEXT("EditableDirectionalLight_C")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Blueprint'/Game/Blueprints/EditableDirectionalLight.EditableDirectionalLight_C'"));
+	if (ClassName.Equals(FString(TEXT("EditablePointLight_C")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Blueprint'/Game/Blueprints/EditablePointLight.EditablePointLight_C'"));
+	if (ClassName.Equals(FString(TEXT("EditableSpotLight_C")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSpotLight.EditableSpotLight_C'"));
+	if (ClassName.Equals(FString(TEXT("EditableSkyLight_C")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSkyLight.EditableSkyLight_C'"));
+
+	//Objetos de sonido
+
+	//Si por casualidad no se encuentra la clase exacta, retornar el path de EditableObject.
+	return FString(EditableObjectClassPath);
 }
