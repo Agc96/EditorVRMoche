@@ -15,16 +15,16 @@
 #include "Kismet/GameplayStatics.h" //Para la función "GetAllActorsofClass"
 #include "Misc/FileHelper.h" //Para las funciones "SaveArrayToFile" y "LoadFileToArray"
 #include "Misc/MessageDialog.h" //Para la función "DisplayMessage"
-#include "Misc/Paths.h"
-#include "Runtime/Online/HTTP/Public/Http.h"
-#include "Serialization/BufferArchive.h"
-#include "Serialization/MemoryReader.h"
+#include "Misc/Paths.h" //Para las funciones relacionadas con detección de archivos y directorios
+#include "Runtime/Online/HTTP/Public/Http.h" //Para las funciones relacionadas con el servicio Web
+#include "Serialization/BufferArchive.h" //Para la escritura de archivos binarios
+#include "Serialization/MemoryReader.h" //Para la lectura de archivos binarios
 #include "EditorVRFunctions.generated.h"
 
 #define PlayerLocationClassPath TEXT("Blueprint'/Game/Blueprints/PlayerLocation.PlayerLocation_C'")
 #define EditableObjectClassPath TEXT("Blueprint'/Game/Blueprints/EditableObject.EditableObject_C'")
-#define EditorFileExtension FString(TEXT("vrm"))
-#define ApiBaseUrl "http://localhost:8080/api/"
+#define EditorFileExtension FString(TEXT("bin"))
+#define ApiBaseUrl "http://200.16.7.166/api/"
 
 UCLASS()
 class EDITORVR_API UEditorVRFunctions : public UBlueprintFunctionLibrary

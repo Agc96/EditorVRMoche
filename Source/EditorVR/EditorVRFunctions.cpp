@@ -9,7 +9,7 @@
  // como en el Juego de Realidad Virtual.
 FString UEditorVRFunctions::GetExtraLevelDirectory()
 {
-	FString RelativePath = FString(FPlatformProcess::UserDir()) / TEXT("VRMoche");
+	FString RelativePath = FString(FPlatformProcess::UserDir()) / TEXT("EditorVRMoche");
 	UE_LOG(LogTemp, Log, TEXT("RelativePath: %s"), *RelativePath);
 
 	FString AbsolutePath = IFileManager::Get().ConvertToAbsolutePathForExternalAppForRead(*RelativePath);
