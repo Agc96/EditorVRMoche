@@ -7,11 +7,11 @@
 
 // Función de deserialización para un nivel del Editor de Niveles. Toma un archivo binario y lo lee para
 // ubicar los objetos editables creados con anterioridad, además de ubicar al personaje en la escena.
-bool UEditorVRFunctions::DeserializeLevel(UObject* WorldContextObject, const FString& OpenFilePath)
+bool UEditorVRFunctions::DeserializeLevel(UObject* WorldContextObject, const FString& FilePath)
 {
 	//Abrir el archivo binario
 	TArray<uint8> OpenFileBuffer;
-	if (!FFileHelper::LoadFileToArray(OpenFileBuffer, *OpenFilePath))
+	if (!FFileHelper::LoadFileToArray(OpenFileBuffer, *FilePath))
 	{
 		DisplayMessage(EAppMsgType::Ok, TEXT("No se pudo cargar el archivo"), TEXT("Error"));
 		return false;

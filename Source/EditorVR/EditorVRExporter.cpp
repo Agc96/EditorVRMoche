@@ -49,11 +49,11 @@ TSharedRef<IHttpRequest> UEditorVRFunctions::PostRequest(FString Subroute, const
     FString e = "\r\n--blahblahsomeboundary--\r\n";
 
     TArray<uint8> Data;
-    data.Append((uint8*)TCHAR_TO_UTF8(*a), a.Len());
-    data.Append((uint8*)TCHAR_TO_UTF8(*ContentDisposition), ContentDisposition.Len());
-    data.Append((uint8*)TCHAR_TO_UTF8(*ContentType), ContentType.Len());
-    data.Append(FileBuffer);
-    data.Append((uint8*)TCHAR_TO_UTF8(*e), e.Len());
+    Data.Append((uint8*)TCHAR_TO_UTF8(*a), a.Len());
+    Data.Append((uint8*)TCHAR_TO_UTF8(*ContentDisposition), ContentDisposition.Len());
+    Data.Append((uint8*)TCHAR_TO_UTF8(*ContentType), ContentType.Len());
+    Data.Append(FileBuffer);
+    Data.Append((uint8*)TCHAR_TO_UTF8(*e), e.Len());
 
     Request->SetContent(Data);
     Request->SetHeader(TEXT("User-Agent"), TEXT("X-UnrealEngine-Agent"));

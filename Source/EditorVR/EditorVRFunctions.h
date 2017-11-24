@@ -42,7 +42,7 @@ public:
 		static bool SaveNewLevel(UObject* WorldContextObject, const FString& FilePath);
 	//Abrir nivel
 	UFUNCTION(BlueprintCallable, Category = "Editor VR Moche", meta = (WorldContext = "WorldContextObject"))
-		static bool DeserializeLevel(UObject* WorldContextObject, const FString& OpenFilePath);
+		static bool DeserializeLevel(UObject* WorldContextObject, const FString& FilePath);
 	//Leer archivos y directorios
 	UFUNCTION(BlueprintCallable, Category = "Editor VR Moche")
 		static TArray<FString> GetExtraLevelsList(const FString& Directory);
