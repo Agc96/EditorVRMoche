@@ -1,7 +1,6 @@
 /**
  * Funciones para la exportación de los niveles creados con el Editor de Niveles al servidor Web.
  * @author Sebastián Solari
- * @author Anthony Gutiérrez
  */
 
 #include "EditorVRFunctions.h"

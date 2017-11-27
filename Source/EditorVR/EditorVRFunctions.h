@@ -24,7 +24,7 @@
 #define PlayerLocationClassPath TEXT("Blueprint'/Game/Blueprints/PlayerLocation.PlayerLocation_C'")
 #define EditableObjectClassPath TEXT("Blueprint'/Game/Blueprints/EditableObject.EditableObject_C'")
 #define EditorFileExtension FString(TEXT("bin"))
-#define ApiBaseUrl "http://200.16.7.166/api/"
+#define ApiBaseUrl FString(TEXT("http://200.16.7.166:8080/api/"))
 
 UCLASS()
 class EDITORVR_API UEditorVRFunctions : public UBlueprintFunctionLibrary

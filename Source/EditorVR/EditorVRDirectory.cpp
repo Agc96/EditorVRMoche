@@ -6,7 +6,7 @@
 
 #include "EditorVRFunctions.h"
 
-// Función para obtener la lista de archivos binarios del Editor de Niveles (extensión ".vrm") 
+// Función para obtener la lista de archivos binarios del Editor de Niveles (extensión ".bin") 
 TArray<FString> UEditorVRFunctions::GetExtraLevelsList(const FString& Directory)
 {
 	IPlatformFile& PlatformFile = FPlatformFileManager::Get().GetPlatformFile();
