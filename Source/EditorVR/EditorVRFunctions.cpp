@@ -5,8 +5,8 @@
 
 #include "EditorVRFunctions.h"
 
- // Función que retorna el path del directorio donde se guardan los niveles extra del juego, tanto en el Editor de Niveles
- // como en el Juego de Realidad Virtual.
+/** Función que retorna el path del directorio donde se guardan los niveles extra del juego, tanto en el Editor de Niveles
+ como en el Juego de Realidad Virtual. */
 FString UEditorVRFunctions::GetExtraLevelDirectory()
 {
 	FString RelativePath = FString(FPlatformProcess::UserDir()) / TEXT("EditorVRMoche");
@@ -17,8 +17,8 @@ FString UEditorVRFunctions::GetExtraLevelDirectory()
 	return AbsolutePath;
 }
 
-// Función auxiliar que muestra una ventana de diálogo con un mensaje, título y botones dependiendo del tipo especificado.
-// Retorna el valor correspondiente a la respuesta del dialog.
+/** Función auxiliar que muestra una ventana de diálogo con un mensaje, título y botones dependiendo del tipo especificado.
+ *  @return Valor correspondiente a la respuesta del dialog. */
 EAppReturnType::Type UEditorVRFunctions::DisplayMessage(EAppMsgType::Type Type, const TCHAR* Message, const TCHAR* Title)
 {
 	FString MessageString = FString(Message), TitleString = FString(Title);
@@ -52,6 +52,8 @@ FString UEditorVRFunctions::GetEditableObjectClassPath(const FString& ClassName)
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSkyLight.EditableSkyLight_C'"));
 
 	//Objetos de sonido
+	if (ClassName.Equals(FString(TEXT("EditableSound1_C")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSound1.EditableSound1_C'"));
 
 	//Si por casualidad no se encuentra la clase exacta, retornar el path de EditableObject.
 	return FString(EditableObjectClassPath);
