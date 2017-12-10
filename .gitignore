@@ -76,3 +76,6 @@ DerivedDataCache/*
 
 # Batch para arreglar las redirecciones
 FixRedirectors.bat
+# Iconos para exportar a Windows (Unreal Engine tiene sus propios paths para guardar dichos iconos)
+EditorVRIcon.ico
+EditorVRMiniature.png

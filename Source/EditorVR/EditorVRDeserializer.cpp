@@ -5,39 +5,50 @@
 
 #include "EditorVRFunctions.h"
 
-// Función de deserialización para un nivel del Editor de Niveles. Toma un archivo binario y lo lee para
-// ubicar los objetos editables creados con anterioridad, además de ubicar al personaje en la escena.
-bool UEditorVRFunctions::DeserializeLevel(UObject* WorldContextObject, const FString& FilePath)
+/** Función que abre un nivel del Editor de Niveles, o verifica si el nivel si es correcto. */
+bool UEditorVRFunctions::OpenLevel(UObject* WorldContextObject, FString FilePath, bool JustVerify)
 {
+	if (FilePath.Equals(FString(TEXT("Seleccione un nivel...")))) return false;
+	if (JustVerify) FilePath = GetExtraLevelDirectory() / FilePath;	//Incluye ya la extensión
+	TArray<uint8> FileBufferArray;
+	
 	//Abrir el archivo binario
-	TArray<uint8> OpenFileBuffer;
-	if (!FFileHelper::LoadFileToArray(OpenFileBuffer, *FilePath))
+	if (!FFileHelper::LoadFileToArray(FileBufferArray, *FilePath))
 	{
-		DisplayMessage(EAppMsgType::Ok, TEXT("No se pudo cargar el archivo"), TEXT("Error"));
+		DisplayMessage(EAppMsgType::Ok, TEXT("No se pudo cargar el archivo."), TEXT("Error"));
 		return false;
 	}
-	if (OpenFileBuffer.Num() <= 8)
+	//Si el archivo tiene menos de 8 bytes, es seguro que el archivo no es válido.
+	if (FileBufferArray.Num() <= 8)
 	{
-		DisplayMessage(EAppMsgType::Ok, 
-			TEXT("El archivo no se puede abrir, asegurese de que es un archivo generado por este Editor."),
-			TEXT("Editor VR Moche"));
+		DisplayMessage(EAppMsgType::Ok, TEXT("El archivo no tiene el formato adecuado para el Editor de Niveles.\
+ Asegurese de que el archivo sea un archivo generado por este Editor."), TEXT("Error"));
 		return false;
 	}
-	FMemoryReader OpenFileReader = FMemoryReader(OpenFileBuffer, true);
-	OpenFileReader.Seek(0);
-
+	
+	FMemoryReader FileReader = FMemoryReader(FileBufferArray, true);
+	FileReader.Seek(0);
 	//Verificar si el file signature es correcto
-	if (!DeserializeFileSignature(OpenFileReader))
+	if (!DeserializeFileSignature(FileReader))
 	{
-		DisplayMessage(EAppMsgType::Ok,
-			TEXT("El archivo no se puede abrir, asegurese de que es un archivo generado por este Editor."),
-			TEXT("Editor VR Moche"));
+		DisplayMessage(EAppMsgType::Ok, TEXT("El archivo no tiene el formato adecuado para el Editor de Niveles.\
+ Asegurese de que el archivo sea un archivo generado por este Editor."), TEXT("Error"));
 		return false;
 	}
+	
+	if (JustVerify) return true;
+	return DeserializeEditableLevel(WorldContextObject, FilePath, FileBufferArray, FileReader);
+}
 
+
+/** Función de deserialización para un nivel del Editor de Niveles. Toma un archivo binario y lo lee para
+ ubicar los objetos editables creados con anterioridad, además de ubicar al personaje en la escena. */
+bool UEditorVRFunctions::DeserializeEditableLevel(UObject* WorldContextObject, const FString& FilePath,
+	TArray<uint8>& FileBufferArray, FMemoryReader& FileReader)
+{	
 	//Leer la cantidad de objetos de ubicación del personaje
 	int32 PlayerLocationCount;
-	OpenFileReader << PlayerLocationCount;
+	FileReader << PlayerLocationCount;
 
 	//Obtener la lista de objetos de ubicación del personaje
 	TSubclassOf<AActor> PlayerLocationClass = StaticLoadClass(AActor::StaticClass(), NULL,
@@ -49,30 +60,29 @@ bool UEditorVRFunctions::DeserializeLevel(UObject* WorldContextObject, const FSt
 	for (int32 i = 0; i < PlayerLocationCount; i++)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Posicion %d de %d:"), i + 1, PlayerLocationCount);
-		DeserializePlayerLocation(OpenFileReader, PlayerLocationArray);
+		DeserializePlayerLocation(FileReader, PlayerLocationArray);
 	}
 
 	//Leer el número de objetos editables guardados
 	int32 EditableObjectCount;
-	OpenFileReader << EditableObjectCount;
+	FileReader << EditableObjectCount;
 
 	//Leer los datos de los objetos editables y ubicarlos en el mapa
 	for (int32 i = 0; i < EditableObjectCount; i++)
 	{
 		UE_LOG(LogTemp, Log, TEXT("Objeto %d de %d:"), i + 1, EditableObjectCount);
-		DeserializeEditableObject(OpenFileReader, WorldContextObject);
+		DeserializeEditableObject(FileReader, WorldContextObject);
 	}
 
 	//Cerrar el archivo
-	DisplayMessage(EAppMsgType::Ok, TEXT("El archivo ha sido leido correctamente."), TEXT("Editor VR Moche"));
-	//UE_LOG(LogTemp, Display, TEXT("El archivo ha sido leido correctamente."));
-	OpenFileReader.FlushCache();
-	OpenFileBuffer.Empty();
-	OpenFileReader.Close();
+	UE_LOG(LogTemp, Display, TEXT("El archivo ha sido leido correctamente."));
+	FileReader.FlushCache();
+	FileBufferArray.Empty();
+	FileReader.Close();
 	return true;
 }
 
-// Función de deserialización del file signature.
+/** Función de deserialización del file signature. */
 bool UEditorVRFunctions::DeserializeFileSignature(FMemoryReader& OpenFileReader)
 {
 	uint8 F, i, l, e, Sig, na, tu, re;
@@ -133,15 +143,17 @@ bool UEditorVRFunctions::DeserializeEditableObject(FMemoryReader& OpenFileReader
 
 	//Obtener las referencias necesarias para poder crear el objeto editable
 	UClass* EditableObjectClass = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
-	UWorld* CurrentWorld = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull);
-	if (!EditableObjectClass || !CurrentWorld) {
+	UWorld* CurrentWorld = (GEngine) ? GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull) : NULL;
+	if (!EditableObjectClass || !CurrentWorld)
+	{
 		UE_LOG(LogTemp, Error, TEXT("- No se pudieron obtener las referencias para generar el objeto."));
 		return false;
 	}
 
 	//Generar el objeto y colocarlo en el mapa
 	AActor* EditableObject = CurrentWorld->SpawnActor(EditableObjectClass);
-	if (!EditableObject) {
+	if (!EditableObject)
+	{
 		UE_LOG(LogTemp, Error, TEXT("- No se pudo crear el objeto editable %s."), *ClassName);
 		return false;
 	}
