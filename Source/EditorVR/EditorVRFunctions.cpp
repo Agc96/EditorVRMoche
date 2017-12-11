@@ -29,22 +29,6 @@ EAppReturnType::Type UEditorVRFunctions::DisplayMessage(EAppMsgType::Type Type, 
 	return FMessageDialog::Open(Type, MessageText, &TitleText);
 }
 
-/** Función auxiliar que muestra o reporta un error en alguna función de serialización o deserialización.
- *  @return Devuelve siempre falso para el uso de las funciones de serialización y deserialización. */
-bool UEditorVRFunctions::DisplayErrorMessage(const TCHAR* Message, bool IsFatalError)
-{
-#if PLATFORM_ANDROID
-	//En el Samsung Gear VR, solo colocarlo como log.
-	UE_LOG(LogTemp, Error, Message);
-#else
-	//En Windows, mostrar una ventana de error con el mensaje solo si es un error fatal.
-	if (IsFatalError) DisplayMessage(EAppMsgType::Ok, Message, TEXT("Error"));
-	else UE_LOG(LogTemp, Error, Message);
-#endif
-	
-	return false;
-}
-
 /** Función auxiliar que mapea la dirección completa de la clase guardada en el archivo serializable, de
  manera que se pueda usar en el SpawnActor(). Esta parte del código va a variar entre el editor y el
  juego, ya que depende de las ubicaciones de las clases dentro del proyecto fuente. (Content/) */

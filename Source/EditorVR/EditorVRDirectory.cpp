@@ -35,7 +35,7 @@ TArray<FString> UEditorVRFunctions::GetExtraLevelsList(const FString& Directory)
 		if (FPaths::GetExtension(FileName, false).Equals(EditorFileExtension, ESearchCase::IgnoreCase))
 		{
 			ExtraLevelsFileList.Add(FileName);
-			UE_LOG(LogTemp, Log, TEXT("- Añadido al arreglo."));
+			UE_LOG(LogTemp, Log, TEXT("- Agregado al arreglo."));
 		}
 	}
 

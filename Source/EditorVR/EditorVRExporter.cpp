@@ -12,7 +12,7 @@ TArray<bool> UEditorVRFunctions::ExportedLevelStatus = TArray<bool>();
 bool UEditorVRFunctions::ExportExistingLevel(UObject* WorldContextObject, const FString& FilePath)
 {
 	FBufferArchive FileBuffer;
-	if (!SerializeLevel(FileBuffer, WorldContextObject, FilePath)) return false;
+	if (!SerializeEditableLevel(FileBuffer, WorldContextObject, FilePath)) return false;
 	
 	UE_LOG(LogTemp, Log, TEXT("FileBuffer size: %d"), FileBuffer.Num());
 	TSharedRef<IHttpRequest> Request = PostRequest("upload", FileBuffer, FPaths::GetCleanFilename(FilePath));
@@ -60,7 +60,7 @@ bool UEditorVRFunctions::ExportNewLevel(UObject* WorldContextObject, const FStri
 	if (!CheckIfCreateOrReplaceFile(FilePath)) return false;
 
 	FBufferArchive FileBuffer;
-	if (!SerializeLevel(FileBuffer, WorldContextObject, FilePath)) return false;
+	if (!SerializeEditableLevel(FileBuffer, WorldContextObject, FilePath)) return false;
 	
 	UE_LOG(LogTemp, Log, TEXT("FileBuffer size: %d"), FileBuffer.Num());
 	TSharedRef<IHttpRequest> Request = PostRequest("upload", FileBuffer, FPaths::GetCleanFilename(FilePath));
@@ -71,7 +71,8 @@ bool UEditorVRFunctions::ExportNewLevel(UObject* WorldContextObject, const FStri
 	{
 		UE_LOG(LogTemp, Log, TEXT("Hubo un problema con el request."));
 		ExportedLevelStatus.Empty();
-		return true; //Se guardó el archivo así que se devuelve true.
+		//Se guardó el archivo así que se devuelve verdadero.
+		return true;
 	}
 	
 	bool WasExported = (ExportedLevelStatus.Num() > 0) ? ExportedLevelStatus[0] : false;

@@ -13,7 +13,7 @@ bool UEditorVRFunctions::OpenExtraLevel(UObject* WorldContextObject, const FStri
 	FString FilePath = GetExtraLevelDirectory() / FileName + TEXT(".") + EditorFileExtension;
 #else
 	//En el Editor de Niveles, esta opción no debe poder escogerse.
-	if (FilePath.Equals(FString(TEXT("Seleccione un nivel...")))) return false;
+	if (FileName.Equals(FString(TEXT("Seleccione un nivel...")))) return false;
 	//Generar el path completo
 	FString FilePath = GetExtraLevelDirectory() / FileName;	//Incluye ya la extensión
 	UE_LOG(LogTemp, Log, TEXT("Archivo a abrirse: %s"), *FilePath);
@@ -21,23 +21,35 @@ bool UEditorVRFunctions::OpenExtraLevel(UObject* WorldContextObject, const FStri
 	
 	//Abrir el archivo binario y verificar el tamaño del archivo
 	TArray<uint8> FileBufferArray;
-	if (!FFileHelper::LoadFileToArray(FileBufferArray, *FilePath)) return DisplayErrorMessage(TEXT("No se pudo cargar el archivo."), true);
-	if (FileBufferArray.Num() <= 8) DisplayErrorMessage(TEXT("El archivo no tiene el formato adecuado para el Editor de Niveles.\
- Asegurese de que el archivo sea un archivo generado por este Editor."), true);
+	if (!FFileHelper::LoadFileToArray(FileBufferArray, *FilePath))
+	{
+		DisplayMessage(EAppMsgType::Ok, TEXT("No se pudo cargar el archivo."), TEXT("Error"));
+		return false;
+	}
+	if (FileBufferArray.Num() <= 8)
+	{
+		DisplayMessage(EAppMsgType::Ok, TEXT("El archivo no tiene el formato adecuado para el Editor de Niveles.\
+ Asegurese de que el archivo sea un archivo generado por este Editor."), TEXT("Error"));
+		return false;
+	}
 	
 	//Abrir el lector de archivos binarios
 	FMemoryReader FileReader = FMemoryReader(FileBufferArray, true);
 	FileReader.Seek(0);
 	//Verificar si el file signature es correcto
-	if (!DeserializeFileSignature(FileReader)) DisplayErrorMessage(TEXT("El archivo no tiene el formato adecuado para el Editor de Niveles.\
- Asegurese de que el archivo sea un archivo generado por este Editor."), true);
+	if (!DeserializeFileSignature(FileReader))
+	{
+		DisplayMessage(EAppMsgType::Ok, TEXT("El archivo no tiene el formato adecuado para el Editor de Niveles.\
+ Asegurese de que el archivo sea un archivo generado por este Editor."), TEXT("Error"));
+		return false;
+	}
 	
 	//Deserializar el archivo si el flag está activado, y luego liberar la memoria.
-	bool WasFileOpened = (Deserialize) ? DeserializeEditableLevel(WorldContextObject, FileReader) : true;
+	bool WasFileOpened = (Deserialize) ? DeserializeEditableLevel(FileReader, WorldContextObject) : true;
 	FileReader.FlushCache();
 	FileBufferArray.Empty();
 	FileReader.Close();
-	return Status;
+	return WasFileOpened;
 }
 
 /** Función de deserialización del file signature. */
@@ -50,30 +62,18 @@ bool UEditorVRFunctions::DeserializeFileSignature(FMemoryReader& FileReader)
 
 /** Función de deserialización para un nivel del Editor de Niveles. Toma un archivo binario y lo lee para
  ubicar los objetos editables creados con anterioridad, además de ubicar al personaje en la escena. */
-bool UEditorVRFunctions::DeserializeEditableLevel(UObject* WorldContextObject, FMemoryReader& FileReader)
+bool UEditorVRFunctions::DeserializeEditableLevel(FMemoryReader& FileReader, UObject* WorldContextObject)
 {
-	//Ajustar el objeto de posición de inicio del personaje
-	UE_LOG(LogTemp, Log, TEXT("PlayerStart:"));
-	if (!DeserializePlayerLocation(WorldContextObject, FString(TEXT("PlayerStart_C")))) return false;
+	//Ajustar los objetos de posición inicial y final del personaje
+	if (!DeserializePlayerLocation(FileReader, WorldContextObject, TEXT("PlayerStart_C"))) return false;
+	if (!DeserializePlayerLocation(FileReader, WorldContextObject, TEXT("PlayerEnd_C"))) return false;
 	
-	//Ajustar el objeto de posición final del personaje
-	UE_LOG(LogTemp, Log, TEXT("PlayerEnd:"));
-	if (!DeserializePlayerLocation(WorldContextObject, FString(TEXT("PlayerEnd_C")))) return false;
+	//Ajustar las texturas del piso, techo y paredes de la sala principal
+	if (!DeserializeFloorAndRoof(FileReader, WorldContextObject, TEXT("Floor_C"))) return false;
+	if (!DeserializeFloorAndRoof(FileReader, WorldContextObject, TEXT("Roof_C"))) return false;
+	if (!DeserializeWalls(FileReader, WorldContextObject)) return false;
 	
-	//Ajustar la textura del piso de la sala principal
-	UE_LOG(LogTemp, Log, TEXT("Floor:"));
-	if (!DeserializeFloorAndRoof(WorldContextObject, FString(TEXT("Floor_C")))) return false;
-	
-	//Ajustar la textura del techo de la sala principal
-	UE_LOG(LogTemp, Log, TEXT("Roof:"));
-	if (!DeserializeFloorAndRoof(WorldContextObject, FString(TEXT("Roof_C")))) return false;
-	
-	//Ajustar la textura de las paredes de la sala principal
-	UE_LOG(LogTemp, Log, TEXT("Walls:"));
-	/***********************************************************************************************
-											FALTA TERMINAR
-	 ***********************************************************************************************/
-	
+	//Crear y ajustar la posición, rotación y escala de cada objeto editable del mapa
 	if (!DeserializeEditableObjectArray(FileReader, WorldContextObject)) return false;
 	
 	UE_LOG(LogTemp, Display, TEXT("El archivo ha sido leido correctamente."));
@@ -81,43 +81,60 @@ bool UEditorVRFunctions::DeserializeEditableLevel(UObject* WorldContextObject, F
 }
 
 /** Función de deserialización para un objeto de ubicación del personaje. */
-bool UEditorVRFunctions::DeserializePlayerLocation(FMemoryReader& FileReader, const TCHAR* ClassName)
+bool UEditorVRFunctions::DeserializePlayerLocation(FMemoryReader& FileReader, UObject* WorldContextObject, const TCHAR* ClassName)
 {
 	//Obtener una referencia a la clase solicitada
 	FString ClassPath = GetEditableClassPath(FString(ClassName));
-	TSubclassOf<AActor> PlayerLocationClass = StaticLoadClass(AActor::StaticClass(), NULL, ClassPath, NULL, LOAD_None, NULL);
+	TSubclassOf<AActor> PlayerLocationClass = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
 	
 	//Buscar todos los actores de dicha clase que estén dentro del mapa activo y verificar que la lista no sea vacía.
 	TArray<AActor*> PlayerLocationArray;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, PlayerLocationClass, PlayerLocationArray);
-	if (PlayerLocationArray.Num() <= 0) return DisplayErrorMessage(TEXT("- No se encontro ningun objeto en el mapa del Editor."), false);
-	
+	if (PlayerLocationArray.Num() <= 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("No se encontro ningun %s en el mapa del Editor."), ClassName);
+		return false;
+	}
+
 	//Obtener la posición del objeto de ubicación
 	FVector Location;
 	FileReader << Location;
-	UE_LOG(LogTemp, Log, TEXT("- Posicion: %.2f %.2f %.2f"), Location.X, Location.Y, Location.Z);
+	UE_LOG(LogTemp, Log, TEXT("Posicion del %s: %.2f %.2f %.2f"), ClassName, Location.X, Location.Y, Location.Z);
 
 	//Reemplazar la posición del primer objeto de la lista
 	PlayerLocationArray[0]->SetActorLocation(Location);
-	UE_LOG(LogTemp, Log, TEXT("- Se ajusto el objeto de ubicacion correctamente."));
+	UE_LOG(LogTemp, Log, TEXT("Se ajusto el objeto de ubicacion %s correctamente."), ClassName);
 	return true;
 }
 
 /** Función de deserialización para el piso y el techo del mapa. */
-bool UEditorVRFunctions::DeserializeFloorAndRoof(FMemoryReader& FileReader, const TCHAR* ClassName)
+bool UEditorVRFunctions::DeserializeFloorAndRoof(FMemoryReader& FileReader, UObject* WorldContextObject, const TCHAR* ClassName)
 {
 	//Obtener una referencia a la clase solicitada
 	FString ClassPath = GetEditableClassPath(FString(ClassName));
-	TSubclassOf<AActor> Class = StaticLoadClass(AActor::StaticClass(), NULL, ClassPath, NULL, LOAD_None, NULL);
+	TSubclassOf<AActor> Class = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
 	
 	//Buscar todos los actores de dicha clase que estén dentro del mapa activo y verificar que la lista no sea vacía.
 	TArray<AActor*> Array;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, Class, Array);
-	if (Array.Num() <= 0) return DisplayErrorMessage(TEXT("- No se encontro ningun objeto en el mapa del Editor."), false);
+	if (Array.Num() <= 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("No se encontro ningun %s en el mapa del Editor."), ClassName);
+		return false;
+	}
 	
 	/***********************************************************************************************
-											FALTA TERMINAR
-	 ***********************************************************************************************/
+	**************************************  FALTA  TERMINAR  **************************************
+	***********************************************************************************************/
+	return true;
+}
+
+bool UEditorVRFunctions::DeserializeWalls(FMemoryReader& FileReader, UObject* WorldContextObject)
+{
+	/***********************************************************************************************
+	**************************************  FALTA  TERMINAR  **************************************
+	***********************************************************************************************/
+
 	return true;
 }
 
@@ -125,9 +142,17 @@ bool UEditorVRFunctions::DeserializeFloorAndRoof(FMemoryReader& FileReader, cons
 bool UEditorVRFunctions::DeserializeEditableObjectArray(FMemoryReader& FileReader, UObject* WorldContextObject)
 {
 	//Obtener las referencias necesarias para la creación de objetos.
-	if (!GEngine) return DisplayErrorMessage(TEXT("No se pudo obtener la referencia al mundo desde GEngine."), false);
+	if (!GEngine)
+	{
+		UE_LOG(LogTemp, Log, TEXT("No se pudo obtener la referencia al mundo desde GEngine."));
+		return false;
+	}
 	UWorld* CurrentWorld = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::ReturnNull);
-	if (!CurrentWorld) return DisplayErrorMessage(TEXT("No se pudo obtener la referencia al mundo desde GetWorldFromContextObject."), false);
+	if (!CurrentWorld)
+	{
+		UE_LOG(LogTemp, Log, TEXT("No se pudo obtener la referencia al mundo desde GetWorldFromContextObject."));
+		return false;
+	}
 	
 	//Leer el número de objetos editables guardados
 	int32 EditableObjectCount;
@@ -169,12 +194,20 @@ bool UEditorVRFunctions::DeserializeEditableObject(FMemoryReader& FileReader, UW
 
 	//Obtener las referencias necesarias para poder crear el objeto editable
 	UClass* EditableObjectClass = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
-	if (!EditableObjectClass) return DisplayErrorMessage(TEXT("- No se pudo obtener la referencia al objeto editable."), false);
+	if (!EditableObjectClass)
+	{
+		UE_LOG(LogTemp, Log, TEXT("- No se pudo obtener la referencia al objeto editable."));
+		return false;
+	}
 	
 	//Generar el objeto editable
 	AActor* EditableObject = CurrentWorld->SpawnActor(EditableObjectClass);
-	if (!EditableObject) return DisplayErrorMessage(TEXT("- No se pudo crear el objeto editable."), false);
-	
+	if (!EditableObject)
+	{
+		UE_LOG(LogTemp, Log, TEXT("- No se pudo crear el objeto editable."));
+		return false;
+	}
+
 	//Colocar el objeto editable en la posición, rotación y escala correspondientes
 	EditableObject->SetActorLocation(Location);
 	EditableObject->SetActorRotation(Rotation);

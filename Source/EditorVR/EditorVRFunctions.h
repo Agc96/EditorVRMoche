@@ -68,18 +68,19 @@ protected:
 private:
 
 	//General
-	static bool DisplayErrorMessage(const TCHAR* Message, bool IsFatalError);
 	static EAppReturnType::Type DisplayMessage(EAppMsgType::Type Type, const TCHAR* Message, const TCHAR* Title);
 	static FString GetEditableClassPath(const FString& ClassName);
 	
 	/** Función de serialización para un nivel del Editor de Niveles. */
-	static bool SerializeEditableLevel(FBufferArchive& FileBuffer, UObject* WorldContextObject);
+	static bool SerializeEditableLevel(FBufferArchive& FileBuffer, UObject* WorldContextObject, const FString& FilePath);
 	/** Función de serialización del file signature. */
 	static void SerializeFileSignature(FBufferArchive& FileBuffer);
 	/** Función de serialización para un objeto de ubicación del personaje. */
-	static bool SerializePlayerLocation(FBufferArchive& FileBuffer, const TCHAR* ClassName);
+	static bool SerializePlayerLocation(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName);
 	/** Función de serialización para el piso y el techo del mapa. */
-	static bool SerializeFloorAndRoof(FBufferArchive& FileBuffer, const TCHAR* ClassName);
+	static bool SerializeFloorAndRoof(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName);
+	/** Función de serialización para las paredes del mapa. */
+	static bool SerializeWalls(FBufferArchive& FileBuffer, UObject* WorldContextObject);
 	/** Función de serialización para el arreglo de objetos editables ubicados en el nivel a guardarse. */
 	static bool SerializeEditableObjectArray(FBufferArchive& FileBuffer, UObject* WorldContextObject);
 	/** Función de serialización para un objeto editable. */
@@ -90,9 +91,11 @@ private:
 	/** Función de deserialización del file signature. */
 	static bool DeserializeFileSignature(FMemoryReader& FileReader);
 	/** Función de deserialización para un objeto de ubicación del personaje. */
-	static bool DeserializePlayerLocation(FMemoryReader& FileReader, const TCHAR* ClassName);
+	static bool DeserializePlayerLocation(FMemoryReader& FileReader, UObject* WorldContextObject, const TCHAR* ClassName);
 	/** Función de deserialización para el piso y el techo del mapa. */
-	static bool DeserializeFloorAndRoof(FMemoryReader& FileReader, const TCHAR* ClassName);
+	static bool DeserializeFloorAndRoof(FMemoryReader& FileReader, UObject* WorldContextObject, const TCHAR* ClassName);
+	/** Función de deserialización para las paredes del mapa. */
+	static bool DeserializeWalls(FMemoryReader& FileReader, UObject* WorldContextObject);
 	/** Función de deserialización para el arreglo de objetos editables ubicados en el nivel a guardarse. */
 	static bool DeserializeEditableObjectArray(FMemoryReader& FileReader, UObject* WorldContextObject);
 	/** Función de deserialización para un objeto editable. */
