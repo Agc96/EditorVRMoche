@@ -16,6 +16,7 @@
 #include "Misc/FileHelper.h" //Para las funciones "SaveArrayToFile" y "LoadFileToArray"
 #include "Misc/MessageDialog.h" //Para la función "DisplayMessage"
 #include "Misc/Paths.h" //Para las funciones relacionadas con detección de archivos y directorios
+#include "Runtime/Engine/Classes/Engine/World.h" //Para la función "SpawnActor"
 #include "Runtime/Online/HTTP/Public/Http.h" //Para las funciones relacionadas con el servicio Web
 #include "Runtime/Online/HTTP/Public/HttpModule.h" //Para la clase "FHttpModule"
 #include "Runtime/Online/HTTP/Public/HttpManager.h" //Para la clase "FHttpManager"
@@ -23,8 +24,6 @@
 #include "Serialization/MemoryReader.h" //Para la lectura de archivos binarios
 #include "EditorVRFunctions.generated.h"
 
-#define PlayerLocationClassPath TEXT("Blueprint'/Game/Blueprints/PlayerLocation.PlayerLocation_C'")
-#define EditableObjectClassPath TEXT("Blueprint'/Game/Blueprints/EditableObject.EditableObject_C'")
 #define EditorFileExtension FString(TEXT("bin"))
 #define ApiBaseUrl FString(TEXT("http://200.16.7.166:8080/api/"))
 
@@ -39,24 +38,24 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Editor VR Moche")
 		static FString GetExtraLevelDirectory();
 	
-	//Guardar nivel
+	/** Función de guardado de un nivel ya existente del Editor de Niveles. */
 	UFUNCTION(BlueprintCallable, Category = "Editor VR Moche", meta = (WorldContext = "WorldContextObject"))
 		static bool SaveExistingLevel(UObject* WorldContextObject, const FString& FilePath);
+	/** Función de guardado de un nivel nuevo del Editor de Niveles. */
 	UFUNCTION(BlueprintCallable, Category = "Editor VR Moche", meta = (WorldContext = "WorldContextObject"))
 		static bool SaveNewLevel(UObject* WorldContextObject, const FString& FilePath);
 	
 	/** Función que abre un nivel del Editor de Niveles, o verifica si el nivel si es correcto. */
 	UFUNCTION(BlueprintCallable, Category = "Editor VR Moche", meta = (WorldContext = "WorldContextObject"))
-		static bool OpenLevel(UObject* WorldContextObject, FString FilePath, bool JustVerify);
+		static bool OpenExtraLevel(UObject* WorldContextObject, const FString& FileName, bool Deserialize);
 	
-	//Leer archivos y directorios
+	/** Función para obtener la lista de archivos binarios del Editor de Niveles */
 	UFUNCTION(BlueprintCallable, Category = "Editor VR Moche")
 		static TArray<FString> GetExtraLevelsList(const FString& Directory);
 	
 	/** Función que guarda y exporta al servidor Web un nivel ya existente desde el Editor de Niveles. */
 	UFUNCTION(BlueprintCallable, Category = "Editor VR Moche", meta = (WorldContext = "WorldContextObject"))
-		static bool ExportExistingLevel(UObject* WorldContextObject, const FString& FilePath);
-	
+		static bool ExportExistingLevel(UObject* WorldContextObject, const FString& FilePath);	
 	/** Función que guarda y exporta al servidor Web un nivel nuevo creado con el Editor de Niveles. */
 	UFUNCTION(BlueprintCallable, Category = "Editor VR Moche", meta = (WorldContext = "WorldContextObject"))
 		static bool ExportNewLevel(UObject* WorldContextObject, const FString& FilePath);
@@ -69,23 +68,40 @@ protected:
 private:
 
 	//General
-	static FString GetEditableObjectClassPath(const FString& ClassName);
+	static bool DisplayErrorMessage(const TCHAR* Message, bool IsFatalError);
 	static EAppReturnType::Type DisplayMessage(EAppMsgType::Type Type, const TCHAR* Message, const TCHAR* Title);
-	//Guardar nivel
-	static bool SerializeLevel(FBufferArchive& FileBuffer, UObject* WorldContextObject, const FString& FilePath);
+	static FString GetEditableClassPath(const FString& ClassName);
+	
+	/** Función de serialización para un nivel del Editor de Niveles. */
+	static bool SerializeEditableLevel(FBufferArchive& FileBuffer, UObject* WorldContextObject);
+	/** Función de serialización del file signature. */
 	static void SerializeFileSignature(FBufferArchive& FileBuffer);
-	static void SerializePlayerPosition(FBufferArchive& FileBuffer, AActor* PlayerLocation);
+	/** Función de serialización para un objeto de ubicación del personaje. */
+	static bool SerializePlayerLocation(FBufferArchive& FileBuffer, const TCHAR* ClassName);
+	/** Función de serialización para el piso y el techo del mapa. */
+	static bool SerializeFloorAndRoof(FBufferArchive& FileBuffer, const TCHAR* ClassName);
+	/** Función de serialización para el arreglo de objetos editables ubicados en el nivel a guardarse. */
+	static bool SerializeEditableObjectArray(FBufferArchive& FileBuffer, UObject* WorldContextObject);
+	/** Función de serialización para un objeto editable. */
 	static void SerializeEditableObject(FBufferArchive& FileBuffer, AActor* EditableObject);
-	//Abrir nivel
+	
 	/** Función de deserialización para un nivel del Editor de Niveles. */
-	static bool DeserializeEditableLevel(UObject* WorldContextObject, const FString& FilePath,
-		TArray<uint8>& FileBufferArray, FMemoryReader& FileReader);
-	static bool DeserializeFileSignature(FMemoryReader& OpenFileReader);
-	static bool DeserializePlayerLocation(FMemoryReader& OpenFileReader, TArray<AActor*> PlayerLocationArray);
-	static bool DeserializeEditableObject(FMemoryReader& OpenFileReader, UObject* WorldContextObject);
+	static bool DeserializeEditableLevel(FMemoryReader& FileReader, UObject* WorldContextObject);
+	/** Función de deserialización del file signature. */
+	static bool DeserializeFileSignature(FMemoryReader& FileReader);
+	/** Función de deserialización para un objeto de ubicación del personaje. */
+	static bool DeserializePlayerLocation(FMemoryReader& FileReader, const TCHAR* ClassName);
+	/** Función de deserialización para el piso y el techo del mapa. */
+	static bool DeserializeFloorAndRoof(FMemoryReader& FileReader, const TCHAR* ClassName);
+	/** Función de deserialización para el arreglo de objetos editables ubicados en el nivel a guardarse. */
+	static bool DeserializeEditableObjectArray(FMemoryReader& FileReader, UObject* WorldContextObject);
+	/** Función de deserialización para un objeto editable. */
+	static bool DeserializeEditableObject(FMemoryReader& FileReader, UWorld* CurrentWorld);
+	
 	//Leer archivos y directorios
 	static bool VerifyOrCreateDirectory(IPlatformFile& PlatformFile, const FString& Directory);
 	static bool CheckIfCreateOrReplaceFile(const FString& FilePath);
+	
 	//Exportar nivel al servidor Web
     static TSharedRef<IHttpRequest> PostRequest(FString Subroute, const TArray<uint8>& DatosASubir, FString NombreArchivo);
 	static bool SendRequest(TSharedRef<IHttpRequest>& Request);
