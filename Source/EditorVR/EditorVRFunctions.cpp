@@ -57,7 +57,7 @@ FString UEditorVRFunctions::GetEditableClassPath(const FString& ClassName)
 	//Objetos del proyecto Desafío Moche
 	if (ClassName.Equals(FString(TEXT("EditableAiapaec_C")), ESearchCase::IgnoreCase))
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableAiapaec.EditableAiapaec_C'"));
-
+	
 	//Objetos de luz
 	if (ClassName.Equals(FString(TEXT("EditableDirectionalLight_C")), ESearchCase::IgnoreCase))
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableDirectionalLight.EditableDirectionalLight_C'"));
@@ -67,11 +67,11 @@ FString UEditorVRFunctions::GetEditableClassPath(const FString& ClassName)
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSpotLight.EditableSpotLight_C'"));
 	if (ClassName.Equals(FString(TEXT("EditableSkyLight_C")), ESearchCase::IgnoreCase))
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSkyLight.EditableSkyLight_C'"));
-
+	
 	//Objetos de sonido
 	if (ClassName.Equals(FString(TEXT("EditableSound1_C")), ESearchCase::IgnoreCase))
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSound1.EditableSound1_C'"));
-
+	
 	//Si por casualidad no se encuentra la clase exacta, retornar una cadena vacía.
 	return FString();
 }
