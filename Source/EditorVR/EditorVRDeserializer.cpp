@@ -5,6 +5,8 @@
 
 #include "EditorVRFunctions.h"
 
+TMap<FString, FString> UEditorVRFunctions::DecorationMaterials = TMap<FString, FString>();
+
 /** Función que abre un nivel del Editor de Niveles, o verifica si el nivel si es correcto. */
 bool UEditorVRFunctions::OpenExtraLevel(UObject* WorldContextObject, const FString& FileName, bool Deserialize)
 {
@@ -65,16 +67,16 @@ bool UEditorVRFunctions::DeserializeFileSignature(FMemoryReader& FileReader)
 bool UEditorVRFunctions::DeserializeEditableLevel(FMemoryReader& FileReader, UObject* WorldContextObject)
 {
 	//Ajustar los objetos de posición inicial y final del personaje
-	if (!DeserializePlayerLocation(FileReader, WorldContextObject, TEXT("PlayerStart_C"))) return false;
-	if (!DeserializePlayerLocation(FileReader, WorldContextObject, TEXT("PlayerEnd_C"))) return false;
+	DeserializePlayerLocation(FileReader, WorldContextObject, TEXT("PlayerStart_C"));
+	DeserializePlayerLocation(FileReader, WorldContextObject, TEXT("PlayerEnd_C"));
 	
 	//Ajustar las texturas del piso, techo y paredes de la sala principal
-	if (!DeserializeFloorAndRoof(FileReader, WorldContextObject, TEXT("Floor_C"))) return false;
-	if (!DeserializeFloorAndRoof(FileReader, WorldContextObject, TEXT("Roof_C"))) return false;
-	if (!DeserializeWalls(FileReader, WorldContextObject)) return false;
+	DeserializeFloorAndRoof(FileReader, WorldContextObject, TEXT("Floor_C"));
+	DeserializeFloorAndRoof(FileReader, WorldContextObject, TEXT("Roof_C"));
+	DeserializeWalls(FileReader, WorldContextObject);
 	
 	//Crear y ajustar la posición, rotación y escala de cada objeto editable del mapa
-	if (!DeserializeEditableObjectArray(FileReader, WorldContextObject)) return false;
+	DeserializeEditableObjectArray(FileReader, WorldContextObject);
 	
 	UE_LOG(LogTemp, Display, TEXT("El archivo ha sido leido correctamente."));
 	return true;
@@ -82,7 +84,12 @@ bool UEditorVRFunctions::DeserializeEditableLevel(FMemoryReader& FileReader, UOb
 
 /** Función de deserialización para un objeto de ubicación del personaje. */
 bool UEditorVRFunctions::DeserializePlayerLocation(FMemoryReader& FileReader, UObject* WorldContextObject, const TCHAR* ClassName)
-{
+{	
+	//Obtener la posición del objeto de ubicación
+	FVector Location;
+	FileReader << Location;
+	UE_LOG(LogTemp, Log, TEXT("- Posicion: %.2f %.2f %.2f"), Location.X, Location.Y, Location.Z);
+	
 	//Obtener una referencia a la clase solicitada
 	FString ClassPath = GetEditableClassPath(FString(ClassName));
 	TSubclassOf<AActor> PlayerLocationClass = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
@@ -92,50 +99,46 @@ bool UEditorVRFunctions::DeserializePlayerLocation(FMemoryReader& FileReader, UO
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, PlayerLocationClass, PlayerLocationArray);
 	if (PlayerLocationArray.Num() <= 0)
 	{
-		UE_LOG(LogTemp, Log, TEXT("No se encontro ningun %s en el mapa del Editor."), ClassName);
+		UE_LOG(LogTemp, Log, TEXT("- No se encontro ningun %s en el mapa del Editor."), ClassName);
 		return false;
 	}
-
-	//Obtener la posición del objeto de ubicación
-	FVector Location;
-	FileReader << Location;
-	UE_LOG(LogTemp, Log, TEXT("Posicion del %s: %.2f %.2f %.2f"), ClassName, Location.X, Location.Y, Location.Z);
-
+	
 	//Reemplazar la posición del primer objeto de la lista
 	PlayerLocationArray[0]->SetActorLocation(Location);
-	UE_LOG(LogTemp, Log, TEXT("Se ajusto el objeto de ubicacion %s correctamente."), ClassName);
+	UE_LOG(LogTemp, Log, TEXT("- Se ajusto el objeto de ubicacion %s correctamente."), ClassName);
 	return true;
 }
 
 /** Función de deserialización para el piso y el techo del mapa. */
-bool UEditorVRFunctions::DeserializeFloorAndRoof(FMemoryReader& FileReader, UObject* WorldContextObject, const TCHAR* ClassName)
-{
-	//Obtener una referencia a la clase solicitada
-	FString ClassPath = GetEditableClassPath(FString(ClassName));
-	TSubclassOf<AActor> Class = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
+void UEditorVRFunctions::DeserializeFloorAndRoof(FMemoryReader& FileReader, UObject* WorldContextObject, const TCHAR* ClassName)
+{	
+	//Obtener el nombre del material
+	FString MaterialName;
+	FileReader << MaterialName;
+	UE_LOG(LogTemp, Log, TEXT("- Nombre del material: %s"), *MaterialName);
 	
-	//Buscar todos los actores de dicha clase que estén dentro del mapa activo y verificar que la lista no sea vacía.
-	TArray<AActor*> Array;
-	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, Class, Array);
-	if (Array.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Log, TEXT("No se encontro ningun %s en el mapa del Editor."), ClassName);
-		return false;
-	}
-	
-	/***********************************************************************************************
-	**************************************  FALTA  TERMINAR  **************************************
-	***********************************************************************************************/
-	return true;
+	//Colocarlo en el mapa de nombres de objeto - materiales.
+	DecorationMaterials.Add(FString(ClassName), MaterialName);
 }
 
-bool UEditorVRFunctions::DeserializeWalls(FMemoryReader& FileReader, UObject* WorldContextObject)
+/** Función de deserialización para las paredes del mapa. */
+void UEditorVRFunctions::DeserializeWalls(FMemoryReader& FileReader, UObject* WorldContextObject)
 {
-	/***********************************************************************************************
-	**************************************  FALTA  TERMINAR  **************************************
-	***********************************************************************************************/
-
-	return true;
+	//Obtener la cantidad de objetos de ubicación del personaje guardados
+	int32 WallCount = 0;
+	FileReader << WallCount;
+	UE_LOG(LogTemp, Log, TEXT("Objeto de decoracion Wall_C: Count = %d"), WallCount);
+	
+	//Obtener los nombres de las paredes y los nombres de los materiales para cada pared.
+	for (int32 i = 0; i < WallCount; i++)
+	{
+		FString WallName, MaterialName;
+		FileReader << WallName << MaterialName;
+		UE_LOG(LogTemp, Log, TEXT("- Nombre = %s, Material = %s"), *WallName, *MaterialName);
+		
+		//Colocar en el mapa de nombres de objeto - materiales.
+		DecorationMaterials.Add(WallName, MaterialName);
+	}
 }
 
 /** Función de deserialización para el arreglo de objetos editables ubicados en el nivel a guardarse. */
@@ -188,9 +191,9 @@ bool UEditorVRFunctions::DeserializeEditableObject(FMemoryReader& FileReader, UW
 	UE_LOG(LogTemp, Log, TEXT("- Rotacion: %.2f %.2f %.2f"), Rotation.Pitch, Rotation.Roll, Rotation.Yaw);
 
 	//Escribir la escala del objeto
-	float Scale;
+	FVector Scale;
 	FileReader << Scale;
-	UE_LOG(LogTemp, Log, TEXT("- Escala: %.2f"), Scale);
+	UE_LOG(LogTemp, Log, TEXT("- Escala: %.2f %.2f %.2f"), Scale.X, Scale.Y, Scale.Z);
 
 	//Obtener las referencias necesarias para poder crear el objeto editable
 	UClass* EditableObjectClass = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
@@ -211,7 +214,12 @@ bool UEditorVRFunctions::DeserializeEditableObject(FMemoryReader& FileReader, UW
 	//Colocar el objeto editable en la posición, rotación y escala correspondientes
 	EditableObject->SetActorLocation(Location);
 	EditableObject->SetActorRotation(Rotation);
-	EditableObject->SetActorScale3D(FVector(Scale));
+	EditableObject->SetActorScale3D(Scale);
 	UE_LOG(LogTemp, Log, TEXT("- Objeto editable creado y posicionado correctamente."));
 	return true;
+}
+
+TMap<FString, FString> UEditorVRFunctions::GetDecorationMaterials()
+{
+	return DecorationMaterials;
 }
