@@ -34,6 +34,16 @@ EAppReturnType::Type UEditorVRFunctions::DisplayMessage(EAppMsgType::Type Type, 
  juego, ya que depende de las ubicaciones de las clases dentro del proyecto fuente. (Content/) */
 FString UEditorVRFunctions::GetEditableClassPath(const FString& ClassName)
 {
+	//Assets tipo material, para los objetos de decoración
+	if (ClassName.Equals(FString(TEXT("DefaultMaterial")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Material'/Engine/EngineMaterials/DefaultMaterial.DefaultMaterial'"));
+	if (ClassName.Equals(FString(TEXT("BasicAsset01")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Material'/Engine/MapTemplates/Materials/BasicAsset01.BasicAsset01"));
+	if (ClassName.Equals(FString(TEXT("PiedraSueloMaterial")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Material'/Game/Assets/PiedraSueloMaterial.PiedraSueloMaterial'"));
+	if (ClassName.Equals(FString(TEXT("PlayerEndMaterial")), ESearchCase::IgnoreCase))
+		return FString(TEXT("Material'/Game/Assets/PlayerEndMaterial.PlayerEndMaterial'"));
+	
 	//Objetos de prueba (básicos)
 	if (ClassName.Equals(FString(TEXT("EditableObject_C")), ESearchCase::IgnoreCase))
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableObject.EditableObject_C'"));
@@ -73,5 +83,5 @@ FString UEditorVRFunctions::GetEditableClassPath(const FString& ClassName)
 		return FString(TEXT("Blueprint'/Game/Blueprints/EditableSound1.EditableSound1_C'"));
 
 	//Si por casualidad no se encuentra la clase exacta, retornar una cadena vacía.
-	return FString();
+	return FString(TEXT(""));
 }

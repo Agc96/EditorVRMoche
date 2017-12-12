@@ -36,16 +36,16 @@ bool UEditorVRFunctions::SerializeEditableLevel(FBufferArchive& FileBuffer, UObj
 	SerializeFileSignature(FileBuffer);
 	
 	//Escribir los objetos de posición inicial y final del personaje
-	if (!SerializePlayerLocation(FileBuffer, WorldContextObject, TEXT("PlayerStart_C"))) return false;
-	if (!SerializePlayerLocation(FileBuffer, WorldContextObject, TEXT("PlayerEnd_C"))) return false;
+	SerializePlayerLocation(FileBuffer, WorldContextObject, TEXT("PlayerStart_C"));
+	SerializePlayerLocation(FileBuffer, WorldContextObject, TEXT("PlayerEnd_C"));
 
 	//Escribir las texturas del piso, techo y paredes de la sala principal
-	if (!SerializeFloorAndRoof(FileBuffer, WorldContextObject, TEXT("Floor_C"))) return false;
-	if (!SerializeFloorAndRoof(FileBuffer, WorldContextObject, TEXT("Roof_C"))) return false;
-	if (!SerializeWalls(FileBuffer, WorldContextObject)) return false;
+	SerializeFloorAndRoof(FileBuffer, WorldContextObject, TEXT("Floor_C"));
+	SerializeFloorAndRoof(FileBuffer, WorldContextObject, TEXT("Roof_C"));
+	SerializeWalls(FileBuffer, WorldContextObject);
 
 	//Escribir la posición, rotación y escala de cada objeto editable del mapa
-	if (!SerializeEditableObjectArray(FileBuffer, WorldContextObject)) return false;
+	SerializeEditableObjectArray(FileBuffer, WorldContextObject);
 	
 	//Guardar los datos en el archivo binario indicado.
 	if (FileBuffer.Num() <= 0)
@@ -71,7 +71,7 @@ void UEditorVRFunctions::SerializeFileSignature(FBufferArchive& FileBuffer)
 
 /** Función de serialización para un objeto de ubicación del personaje.
  *  @return Verdadero si se guardó correctamente, falso si no se pudo ubicar al objeto. */
-bool UEditorVRFunctions::SerializePlayerLocation(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName)
+void UEditorVRFunctions::SerializePlayerLocation(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName)
 {
 	//Obtener una referencia a la clase solicitada
 	FString ClassPath = GetEditableClassPath(FString(ClassName));
@@ -80,22 +80,22 @@ bool UEditorVRFunctions::SerializePlayerLocation(FBufferArchive& FileBuffer, UOb
 	//Buscar todos los actores de dicha clase que estén dentro del mapa activo y verificar que la lista no sea vacía.
 	TArray<AActor*> PlayerLocationArray;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, PlayerLocationClass, PlayerLocationArray);
-	if (PlayerLocationArray.Num() <= 0)
+
+	//Obtener el número de elementos del arreglo
+	int32 PlayerLocationCount = PlayerLocationArray.Num();
+	FileBuffer << PlayerLocationCount;
+
+	for (int32 i = 0; i < PlayerLocationCount; i++)
 	{
-		UE_LOG(LogTemp, Log, TEXT("No se encontro ningun %s en el mapa del Editor."), ClassName);
-		return false;
+		//Escribir la posición del objeto
+		FVector Location = PlayerLocationArray[i]->GetActorLocation();
+		UE_LOG(LogTemp, Log, TEXT("Posicion de %s: %.2f %.2f %.2f"), ClassName, Location.X, Location.Y, Location.Z);
+		FileBuffer << Location;
 	}
-	
-	//Escribir la posición del objeto
-	FVector Location = PlayerLocationArray[0]->GetActorLocation();
-	UE_LOG(LogTemp, Log, TEXT("Posicion de %s: %.2f %.2f %.2f"), ClassName, Location.X, Location.Y, Location.Z);
-	FileBuffer << Location;
-	
-	return true;
 }
 
 /** Función de serialización para el piso y el techo del mapa. */
-bool UEditorVRFunctions::SerializeFloorAndRoof(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName)
+void UEditorVRFunctions::SerializeFloorAndRoof(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName)
 {
 	//Obtener una referencia a la clase solicitada
 	FString ClassPath = GetEditableClassPath(FString(ClassName));
@@ -104,39 +104,72 @@ bool UEditorVRFunctions::SerializeFloorAndRoof(FBufferArchive& FileBuffer, UObje
 	//Buscar todos los actores de dicha clase que estén dentro del mapa activo y verificar que la lista no sea vacía.
 	TArray<AActor*> Array;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, Class, Array);
-	if (Array.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Log, TEXT("No se encontro ningun %s en el mapa del Editor."), ClassName);
-		return false;
-	}
 
-	//Obtener el componente de malla estática
-	TArray<UStaticMeshComponent*> Components;
-	Array[0]->GetComponents<UStaticMeshComponent>(Components);
-	if (Components.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Log, TEXT("No se encontro ningun componente de malla estatica en %s."), ClassName);
-		return false;
-	}
+	int32 ArrayCount = Array.Num();
+	UE_LOG(LogTemp, Log, TEXT("%s: %d elementos"), ClassName, ArrayCount);
+	FileBuffer << ArrayCount;
 
-	/***********************************************************************************************
-	**************************************  FALTA  TERMINAR  **************************************
-	***********************************************************************************************/
-	return true;
+	for (int i = 0; i < ArrayCount; i++)
+	{
+		FString MaterialName;
+
+		//Obtener el componente de malla estática
+		TArray<UStaticMeshComponent*> Components;
+		Array[i]->GetComponents<UStaticMeshComponent>(Components);
+		if (Components.Num() > 0 && Components[0])
+		{
+			//Obtener el material de la malla estática
+			UMaterialInterface* MaterialInterface = Components[0]->GetMaterial(0);
+			UMaterial* Material = (MaterialInterface) ? MaterialInterface->GetMaterial() : NULL;
+
+			//Obtener el nombre del material
+			if (MaterialInterface && Material) MaterialName = Material->GetName();
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("- MaterialName = %s"), *MaterialName);
+		FileBuffer << MaterialName;
+	}
 }
 
 /** Función de serialización para las paredes del mapa. */
-bool UEditorVRFunctions::SerializeWalls(FBufferArchive& FileBuffer, UObject* WorldContextObject)
+void UEditorVRFunctions::SerializeWalls(FBufferArchive& FileBuffer, UObject* WorldContextObject)
 {
-	/***********************************************************************************************
-	**************************************  FALTA  TERMINAR  **************************************
-	***********************************************************************************************/
+	//Obtener una referencia a la clase solicitada
+	FString WallClassPath = GetEditableClassPath(FString(TEXT("Wall_C")));
+	TSubclassOf<AActor> WallClass = StaticLoadClass(AActor::StaticClass(), NULL, *WallClassPath, NULL, LOAD_None, NULL);
 
-	return true;
+	//Buscar todos los actores de dicha clase que estén dentro del mapa activo y verificar que la lista no sea vacía.
+	TArray<AActor*> WallArray;
+	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, WallClass, WallArray);
+
+	int32 WallArrayCount = WallArray.Num();
+	UE_LOG(LogTemp, Log, TEXT("Wall_C: %d elementos"), WallArrayCount);
+	FileBuffer << WallArrayCount;
+
+	for (int32 i = 0; i < WallArrayCount; i++)
+	{
+		FString WallName = WallArray[i]->GetName(), WallMaterialName;
+
+		//Obtener el componente de malla estática
+		TArray<UStaticMeshComponent*> Components;
+		WallArray[i]->GetComponents<UStaticMeshComponent>(Components);
+		if (Components.Num() > 0 && Components[0])
+		{
+			//Obtener el material de la malla estática
+			UMaterialInterface* MaterialInterface = Components[0]->GetMaterial(0);
+			UMaterial* Material = (MaterialInterface) ? MaterialInterface->GetMaterial() : NULL;
+
+			//Obtener el nombre del material
+			if (MaterialInterface && Material) WallMaterialName = Material->GetName();
+		}
+
+		UE_LOG(LogTemp, Log, TEXT("- WallName = %s, MaterialName = %s"), *WallName, *WallMaterialName);
+		FileBuffer << WallName << WallMaterialName;
+	}
 }
 
 /** Función de serialización para el arreglo de objetos editables ubicados en el nivel a guardarse. */
-bool UEditorVRFunctions::SerializeEditableObjectArray(FBufferArchive& FileBuffer, UObject* WorldContextObject)
+void UEditorVRFunctions::SerializeEditableObjectArray(FBufferArchive& FileBuffer, UObject* WorldContextObject)
 {
 	//Obtener una referencia a la clase solicitada
 	FString ClassPath = GetEditableClassPath(FString(TEXT("EditableObject_C")));
@@ -145,14 +178,10 @@ bool UEditorVRFunctions::SerializeEditableObjectArray(FBufferArchive& FileBuffer
 	//Buscar todos los actores de dicha clase que estén dentro del mapa activo y verificar que la lista no sea vacía.
 	TArray<AActor*> EditableObjectArray;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, EditableObjectClass, EditableObjectArray);
-	if (EditableObjectArray.Num() <= 0)
-	{
-		UE_LOG(LogTemp, Log, TEXT("No se encontro ningun objeto editable en el mapa del Editor."));
-		return false;
-	}
 	
 	//Guardar el número de objetos editables
 	int32 EditableObjectCount = EditableObjectArray.Num();
+	UE_LOG(LogTemp, Log, TEXT("Numero de objetos editables: %d"), EditableObjectCount);
 	FileBuffer << EditableObjectCount;
 
 	//Guardar los datos de los objetos editables que están dentro del mapa
@@ -161,8 +190,6 @@ bool UEditorVRFunctions::SerializeEditableObjectArray(FBufferArchive& FileBuffer
 		UE_LOG(LogTemp, Log, TEXT("Objeto editable %d de %d:"), i + 1, EditableObjectCount);
 		SerializeEditableObject(FileBuffer, EditableObjectArray[i]);
 	}
-	
-	return true;
 }
 
 /** Función de serialización para un objeto editable. */

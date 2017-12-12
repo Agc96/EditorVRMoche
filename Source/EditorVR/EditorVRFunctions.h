@@ -17,6 +17,9 @@
 #include "Misc/MessageDialog.h" //Para la función "DisplayMessage"
 #include "Misc/Paths.h" //Para las funciones relacionadas con detección de archivos y directorios
 #include "Runtime/Engine/Classes/Engine/World.h" //Para la función "SpawnActor"
+#include "Runtime/Engine/Classes/Components/StaticMeshComponent.h" //Para los componentes de malla estática
+#include "Runtime/Engine/Classes/Materials/MaterialInterface.h" //Para la interfaz del material
+#include "Runtime/Engine/Classes/Materials/Material.h" //Para la referencia al material
 #include "Runtime/Online/HTTP/Public/Http.h" //Para las funciones relacionadas con el servicio Web
 #include "Runtime/Online/HTTP/Public/HttpModule.h" //Para la clase "FHttpModule"
 #include "Runtime/Online/HTTP/Public/HttpManager.h" //Para la clase "FHttpManager"
@@ -76,13 +79,13 @@ private:
 	/** Función de serialización del file signature. */
 	static void SerializeFileSignature(FBufferArchive& FileBuffer);
 	/** Función de serialización para un objeto de ubicación del personaje. */
-	static bool SerializePlayerLocation(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName);
+	static void SerializePlayerLocation(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName);
 	/** Función de serialización para el piso y el techo del mapa. */
-	static bool SerializeFloorAndRoof(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName);
+	static void SerializeFloorAndRoof(FBufferArchive& FileBuffer, UObject* WorldContextObject, const TCHAR* ClassName);
 	/** Función de serialización para las paredes del mapa. */
-	static bool SerializeWalls(FBufferArchive& FileBuffer, UObject* WorldContextObject);
+	static void SerializeWalls(FBufferArchive& FileBuffer, UObject* WorldContextObject);
 	/** Función de serialización para el arreglo de objetos editables ubicados en el nivel a guardarse. */
-	static bool SerializeEditableObjectArray(FBufferArchive& FileBuffer, UObject* WorldContextObject);
+	static void SerializeEditableObjectArray(FBufferArchive& FileBuffer, UObject* WorldContextObject);
 	/** Función de serialización para un objeto editable. */
 	static void SerializeEditableObject(FBufferArchive& FileBuffer, AActor* EditableObject);
 	
