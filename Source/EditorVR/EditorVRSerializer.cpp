@@ -81,17 +81,11 @@ void UEditorVRFunctions::SerializePlayerLocation(FBufferArchive& FileBuffer, UOb
 	TArray<AActor*> PlayerLocationArray;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, PlayerLocationClass, PlayerLocationArray);
 
-	//Obtener el número de elementos del arreglo
-	int32 PlayerLocationCount = PlayerLocationArray.Num();
-	FileBuffer << PlayerLocationCount;
-
-	for (int32 i = 0; i < PlayerLocationCount; i++)
-	{
-		//Escribir la posición del objeto
-		FVector Location = PlayerLocationArray[i]->GetActorLocation();
-		UE_LOG(LogTemp, Log, TEXT("Posicion de %s: %.2f %.2f %.2f"), ClassName, Location.X, Location.Y, Location.Z);
-		FileBuffer << Location;
-	}
+	//Escribir la posición del objeto
+	FVector Location = FVector();
+	if (PlayerLocationArray.Num() > 0) Location = PlayerLocationArray[0]->GetActorLocation();
+	UE_LOG(LogTemp, Log, TEXT("Posicion de %s: %.2f %.2f %.2f"), ClassName, Location.X, Location.Y, Location.Z);
+	FileBuffer << Location;
 }
 
 /** Función de serialización para el piso y el techo del mapa. */
@@ -99,35 +93,35 @@ void UEditorVRFunctions::SerializeFloorAndRoof(FBufferArchive& FileBuffer, UObje
 {
 	//Obtener una referencia a la clase solicitada
 	FString ClassPath = GetEditableClassPath(FString(ClassName));
-	TSubclassOf<AActor> Class = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
+	TSubclassOf<AActor> DecorationClass = StaticLoadClass(AActor::StaticClass(), NULL, *ClassPath, NULL, LOAD_None, NULL);
 	
 	//Buscar todos los actores de dicha clase que estén dentro del mapa activo y verificar que la lista no sea vacía.
-	TArray<AActor*> Array;
-	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, Class, Array);
+	TArray<AActor*> DecorationArray;
+	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, DecorationClass, DecorationArray);
 
-	int32 ArrayCount = Array.Num();
-	UE_LOG(LogTemp, Log, TEXT("%s: %d elementos"), ClassName, ArrayCount);
-	FileBuffer << ArrayCount;
+	//Obtener el nombre del material de la malla estática del objeto de decoración
+	FString MaterialName;
+	if (DecorationArray.Num() > 0) GetSerializedMaterial(DecorationArray[0], MaterialName);
 
-	for (int i = 0; i < ArrayCount; i++)
+	//Escribir el nombre del material
+	UE_LOG(LogTemp, Log, TEXT("%s: MaterialName = %s"), ClassName, *MaterialName);
+	FileBuffer << MaterialName;
+}
+
+/** Función que obtiene el nombre un material de un objeto de decoración. */
+void UEditorVRFunctions::GetSerializedMaterial(AActor* DecorationActor, FString& MaterialName)
+{
+	//Obtener el componente de malla estática
+	TArray<UStaticMeshComponent*> Components;
+	DecorationActor->GetComponents<UStaticMeshComponent>(Components);
+	if (Components.Num() > 0 && Components[0])
 	{
-		FString MaterialName;
+		//Obtener el material de la malla estática
+		UMaterialInterface* MaterialInterface = Components[0]->GetMaterial(0);
+		UMaterial* Material = (MaterialInterface) ? MaterialInterface->GetMaterial() : NULL;
 
-		//Obtener el componente de malla estática
-		TArray<UStaticMeshComponent*> Components;
-		Array[i]->GetComponents<UStaticMeshComponent>(Components);
-		if (Components.Num() > 0 && Components[0])
-		{
-			//Obtener el material de la malla estática
-			UMaterialInterface* MaterialInterface = Components[0]->GetMaterial(0);
-			UMaterial* Material = (MaterialInterface) ? MaterialInterface->GetMaterial() : NULL;
-
-			//Obtener el nombre del material
-			if (MaterialInterface && Material) MaterialName = Material->GetName();
-		}
-
-		UE_LOG(LogTemp, Log, TEXT("- MaterialName = %s"), *MaterialName);
-		FileBuffer << MaterialName;
+		//Obtener el nombre del material
+		if (MaterialInterface && Material) MaterialName = Material->GetName();
 	}
 }
 
@@ -142,26 +136,16 @@ void UEditorVRFunctions::SerializeWalls(FBufferArchive& FileBuffer, UObject* Wor
 	TArray<AActor*> WallArray;
 	UGameplayStatics::GetAllActorsOfClass(WorldContextObject, WallClass, WallArray);
 
+	//Guardar el número de paredes ubicadas en el mapa
 	int32 WallArrayCount = WallArray.Num();
 	UE_LOG(LogTemp, Log, TEXT("Wall_C: %d elementos"), WallArrayCount);
 	FileBuffer << WallArrayCount;
 
+	//Guardar el nombre asignado a cada pared junto con el nombre del material
 	for (int32 i = 0; i < WallArrayCount; i++)
 	{
 		FString WallName = WallArray[i]->GetName(), WallMaterialName;
-
-		//Obtener el componente de malla estática
-		TArray<UStaticMeshComponent*> Components;
-		WallArray[i]->GetComponents<UStaticMeshComponent>(Components);
-		if (Components.Num() > 0 && Components[0])
-		{
-			//Obtener el material de la malla estática
-			UMaterialInterface* MaterialInterface = Components[0]->GetMaterial(0);
-			UMaterial* Material = (MaterialInterface) ? MaterialInterface->GetMaterial() : NULL;
-
-			//Obtener el nombre del material
-			if (MaterialInterface && Material) WallMaterialName = Material->GetName();
-		}
+		GetSerializedMaterial(WallArray[i], WallMaterialName);
 
 		UE_LOG(LogTemp, Log, TEXT("- WallName = %s, MaterialName = %s"), *WallName, *WallMaterialName);
 		FileBuffer << WallName << WallMaterialName;
@@ -213,5 +197,5 @@ void UEditorVRFunctions::SerializeEditableObject(FBufferArchive& FileBuffer, AAc
 	//Escribir la escala del objeto
 	FVector Scale = EditableObject->GetActorScale();
 	UE_LOG(LogTemp, Log, TEXT("- Escala: %.2f %.2f %.2f"), Scale.X, Scale.Y, Scale.Z);
-	FileBuffer << Scale.X;
+	FileBuffer << Scale;
 }
